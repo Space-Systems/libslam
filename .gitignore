@@ -1,0 +1,5 @@
+include/
+lib/
+build/
+doc/latex/
+.DS_store
