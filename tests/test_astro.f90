@@ -49,6 +49,7 @@ real(dp) :: eccentricitysquared   ! 2f - f**2
 real(dp) :: astronomicalunit		  ! 1 astronomical unit (au)
 real(dp) :: LOD				            ! Length of Day
 real(dp) :: juliandate			      ! Julian date
+real(dp) :: modifiedjuliendate    ! Modified julien date
 real(dp) :: tut1			            ! Centuries of JD
 real(dp) :: orbitalperiod		      ! Orbital period
 real(dp) :: semimajoraxis		      ! Semi major axis
@@ -173,8 +174,9 @@ end if
 
 !** Check GMST !Implement real example!
 juliandate = 2448855.009722d0
+modifiedjuliendate = juliandate - 2400000.5d0
 tut1 = (juliandate - 2451545.d0)/36525.d0
-if (abs(mod(4.8949612128d0 + (230121.675315423d0 + (6.77071394d-6 - 4.508767234d-10*tut1)*tut1)*tut1, twopi) - getGMST(juliandate)) .gt. eps15) then !Here radiusEarth_eigen is default. In slam astro it depends which Earth radius is initialized.
+if (abs(mod(4.8949612128d0 + (230121.675315423d0 + (6.77071394d-6 - 4.508767234d-10*tut1)*tut1)*tut1, twopi) - getGMST(modifiedjuliendate)) .gt. eps15) then !Here radiusEarth_eigen is default. In slam astro it depends which Earth radius is initialized.
   error = .true.
   CALL slam_message('ERROR: Deviation in GMST.',1)
 end if
