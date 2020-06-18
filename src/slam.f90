@@ -12,7 +12,7 @@ module slam
     use ISO_C_BINDING
 
 #define SLAM_VERSION_MAJOR 1
-#define SLAM_VERSION_MINOR 0
+#define SLAM_VERSION_MINOR 1
 #define SLAM_VERSION_REVISION 0
 
 end module slam
