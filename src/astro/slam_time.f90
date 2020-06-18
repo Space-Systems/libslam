@@ -136,6 +136,7 @@ module slam_time
   public :: tokenizeDate
   public :: gd2jd
   public :: gd2mjd
+  public :: is_leap_year
   public :: jd2gd
   public :: mjd2gd
   public :: mjd2daySeconds
@@ -1478,7 +1479,7 @@ module slam_time
     integer :: jjd               ! integer value of julian date
     integer :: jm                ! month index
     real(dp)  :: xdy               ! fraction of day
-    real(dp)  :: xjd               ! Julian Date 
+    real(dp)  :: xjd               ! Julian Date
 
 
     jm = (jmo - 14)/12
@@ -2508,5 +2509,27 @@ end subroutine mjd2gd_std
   !** END
   return
   end function gd2dyr
+
+!> @brief Checks if a given year is a leap year
+!>
+!> @param[in] year - year index (0 - 9999)
+!>
+!> @details	\par Description: \n
+!>  (none)
+!>
+!> @anchor is_leap_year
+  function is_leap_year(year) result (leap_year_flag)
+
+    logical :: leap_year_flag
+    integer :: year
+
+    if((mod(year,4) == 0) .and. ((mod(year,400) == 0) .or. (mod(year,100) /= 0))) then
+      leap_year_flag = .true.
+    else
+      leap_year_flag = .false.
+    endif
+
+  end function is_leap_year
+
 
 end module slam_time

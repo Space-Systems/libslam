@@ -44,6 +44,7 @@ program test_time_class
 
   real(dp) :: reference_jd
   real(dp) :: reference_mjd
+  integer :: error_number
 
   !** create the test class
   test => testing_create_from_test_name(test_name)
@@ -59,7 +60,7 @@ program test_time_class
     endif
 
     !** allocate object
-    time_class => time_create_from_date_from_gd(2019,12,01,13,22,1.1d0,1)
+    time_class => time_create_from_gd(2019,12,01,13,22,1.1d0,1)
 
     !** check that the pointer points somewhere
     if (.not. associated(time_class)) then
@@ -95,7 +96,7 @@ program test_time_class
     test_time_system = TIME_UTC
 
     !** create and stuff
-    time_class => time_create_from_date_from_gd(test_year, test_month, test_day, test_hour, test_minute, test_second, test_time_system)
+    time_class => time_create_from_gd(test_year, test_month, test_day, test_hour, test_minute, test_second, test_time_system)
 
     !** check that the correct values are returned here
     error_local = test%assert_equal(time_class%get_year(), test_year, "get_year()")
@@ -252,11 +253,11 @@ program test_time_class
     test_second = 1.d0
     test_time_system = TIME_UTC
 
-    time_class_gd => time_create_from_date_from_gd(test_year, test_month, test_day, test_hour, test_minute, test_second, test_time_system)
+    time_class_gd => time_create_from_gd(test_year, test_month, test_day, test_hour, test_minute, test_second, test_time_system)
 
     !** from that, create the rest
-    time_class_jd => time_create_from_date_from_jd(time_class_gd%get_jd(), test_time_system)
-    time_class_mjd => time_create_from_date_from_mjd(time_class_gd%get_mjd(), test_time_system)
+    time_class_jd => time_create_from_jd(time_class_gd%get_jd(), test_time_system)
+    time_class_mjd => time_create_from_mjd(time_class_gd%get_mjd(), test_time_system)
 
     !** try that is identical
     error_local = test%assert_equal(time_class_gd%get_jd(), time_class_jd%get_jd(), "compare jd, 1", 1.d-12)
@@ -289,6 +290,154 @@ program test_time_class
     call time_finalize(time_class_gd)
     call time_finalize(time_class_jd)
     call time_finalize(time_class_mjd)
+
+    !** check if the pointer is not associated
+    if (associated(time_class)) then
+      call test%set_any_error("time_finalize(time_class)")
+    endif
+
+  end if
+
+  !===========================================
+  !** TEST 2: TEST THE CREATE FROM STRING FUNCTION
+  !===========================================
+  if (.not. test%has_error_occurred()) then
+
+    !** check if the pointer is not associated
+    if (associated(time_class)) then
+      call test%set_any_error("associated(time_class).")
+    end if
+
+    !** test some that should work
+    time_class => time_create_from_iso_string("2020-12-13T12:22:34Z")
+    error_local = test%assert_equal(time_class%get_time_system(), time_class%get_time_system(), "time system, created from string, 1")
+    error_local = test%assert_equal(time_class%get_year(), 2020, "get_year(), created from string, 1")
+    error_local = test%assert_equal(time_class%get_month(), 12, "get_month(), created from string, 1")
+    error_local = test%assert_equal(time_class%get_minute(), 22, "get_minute(), created from string, 1")
+    error_local = test%assert_equal(time_class%get_second(), 34.d0, "get_second(), created from string, 1")
+    call time_finalize(time_class)
+
+    time_class => time_create_from_iso_string("2020-12-13T12:22:34.1243213Z")
+    error_local = test%assert_equal(time_class%get_time_system(), time_class%get_time_system(), "time system, created from string, 2")
+    error_local = test%assert_equal(time_class%get_year(), 2020, "get_year(), created from string, 2")
+    error_local = test%assert_equal(time_class%get_month(), 12, "get_month(), created from string, 2")
+    error_local = test%assert_equal(time_class%get_minute(), 22, "get_minute(), created from string, 2")
+    error_local = test%assert_equal(time_class%get_second(), 34.1243213_dp, "get_second(), created from string, 2")
+    call time_finalize(time_class)
+
+    time_class => time_create_from_iso_string("2020-12-13T12:22:34.124341242213Z")
+    error_local = test%assert_equal(time_class%get_time_system(), time_class%get_time_system(), "time system, created from string, 3")
+    error_local = test%assert_equal(time_class%get_year(), 2020, "get_year(), created from string, 3")
+    error_local = test%assert_equal(time_class%get_month(), 12, "get_month(), created from string, 3")
+    error_local = test%assert_equal(time_class%get_minute(), 22, "get_minute(), created from string, 3")
+    error_local = test%assert_equal(time_class%get_second(), 34.124341242213_dp, "get_second(), created from string, 3")
+    call time_finalize(time_class)
+
+    !** invoke errors
+    call initErrorHandler(control = "YES", errAction = "RETURN", traceback = "YES")
+    error_number = setLogVerbosity(QUIET)
+
+    !** not works
+    time_class => time_create_from_iso_string("2020-12-13T12:22:34.124341242213122Z")
+    !** check for error
+    if (getLatestError() == 0) then
+      call test%set_any_error(": invalid iso string did not invoke error, 1.")
+    end if
+    call resetError()
+    call time_finalize(time_class)
+
+    time_class => time_create_from_iso_string("2020-12-13T12:22:34.12434")
+    !** check for error
+    if (getLatestError() == 0) then
+      call test%set_any_error(": invalid iso string did not invoke error, 1.")
+    end if
+    call resetError()
+    call time_finalize(time_class)
+
+    time_class => time_create_from_iso_string("2020-1-13T12:22:34.12434")
+    !** check for error
+    if (getLatestError() == 0) then
+      call test%set_any_error(": invalid iso string did not invoke error, 1.")
+    end if
+    call resetError()
+    call time_finalize(time_class)
+
+    time_class => time_create_from_iso_string("2020:01:13T12:22:34.12434")
+    !** check for error
+    if (getLatestError() == 0) then
+      call test%set_any_error(": invalid iso string did not invoke error, 1.")
+    end if
+    call resetError()
+    call time_finalize(time_class)
+
+    !** test some errors in GD setter
+    time_class => time_create_from_iso_string("2020-00-13T12:22:34.12434Z")
+    !** check for error
+    if (getLatestError() == 0) then
+      call test%set_any_error(": invalid month string did not invoke error, 1.")
+    end if
+    call resetError()
+    call time_finalize(time_class)
+
+    time_class => time_create_from_iso_string("2020-01-32T12:22:34.12434Z")
+    !** check for error
+    if (getLatestError() == 0) then
+      call test%set_any_error(": invalid day did not invoke error, 1.")
+    end if
+    call resetError()
+    call time_finalize(time_class)
+
+    time_class => time_create_from_iso_string("2020-01-13T24:22:34.12434Z")
+    !** check for error
+    if (getLatestError() == 0) then
+      call test%set_any_error(": invalid hour did not invoke error, 1.")
+    end if
+    call resetError()
+    call time_finalize(time_class)
+
+    time_class => time_create_from_iso_string("2020-01-13T23:60:34.12434Z")
+    !** check for error
+    if (getLatestError() == 0) then
+      call test%set_any_error(": invalid minute did not invoke error, 1.")
+    end if
+    call resetError()
+    call time_finalize(time_class)
+
+    time_class => time_create_from_iso_string("2020-01-13T23:22:60.12434Z")
+    !** check for error
+    if (getLatestError() == 0) then
+      call test%set_any_error(": invalid second did not invoke error, 1.")
+    end if
+    call resetError()
+    call time_finalize(time_class)
+
+    time_class => time_create_from_iso_string("2020-02-30T23:22:34.12434Z")
+    !** check for error
+    if (getLatestError() == 0) then
+      call test%set_any_error(": invalid day for feb. in leap year did not invoke error, 1.")
+    end if
+    call resetError()
+    call time_finalize(time_class)
+
+    time_class => time_create_from_iso_string("2020-02-29T23:22:34.12434Z")
+    !** check for error
+    if (getLatestError() .ne. 0) then
+      call test%set_any_error(": valid day for feb. in leap year did invoke error, 1.")
+    end if
+    call resetError()
+    call time_finalize(time_class)
+
+    time_class => time_create_from_iso_string("2019-02-29T23:22:34.12434Z")
+    !** check for error
+    if (getLatestError() == 0) then
+      call test%set_any_error(": invalid day for feb. in normal year did not invoke error, 1.")
+    end if
+    call resetError()
+    call time_finalize(time_class)
+
+    !** reset error handling
+    call initErrorHandler(control = "YES", errAction = "ABORT", traceback = "YES")
+    error_number = setLogVerbosity(QUIET)
 
     !** check if the pointer is not associated
     if (associated(time_class)) then
