@@ -2509,6 +2509,104 @@ end subroutine mjd2gd_std
   !** END
   return
   end function gd2dyr
+  
+  
+
+!> @brief 	The subroutine converts date from a digital year format (YYYY.YYYY)
+!!   		into Gregorian Date. The inverse funtion is called <I>gd2dyr</I>.
+!!
+!! @param[in] 	dyr		digital day (0.0 - 9999365.99)
+!! @param[out] 	jyr		year index (0 - 9999)
+!! @param[out] 	jmo		month index (1 - 12)
+!! @param[out] 	jdy		day index (1 - 31)
+!! @param[out] 	jhr		hour index (0 - 23)
+!! @param[out]	jmi		minute index (0 - 59)
+!! @param[out]	jsc		second index (0 - 59)
+!!
+!! @details	\par Description: \n
+!!		The subroutine converts date from a digital year format (YYYY.YYYY)
+!!   		into Gregorian Date. The inverse funtion is called <I>gd2dyr</I>.
+!!
+!! @anchor	dyr2gd
+
+      SUBROUTINE dyr2gd (&       ! digital year --> gregorian date
+     &     dyr,&                 ! <-- DBL   digital year (0.0 - 9999.99)
+     &     jyr,&                 ! --> INT   year index (0 - 9999)
+     &     jmo,&                 ! --> INT   month index (1 - 12)
+     &     jdy,&                 ! --> INT   day index (1 - 31)
+     &     jhr,&                 ! --> INT   hour index (0 - 23)
+     &     jmi,&                 ! --> INT   minute index (0 - 59)
+     &     jsc)                  ! --> INT   second index (0 - 59)
+
+      IMPLICIT NONE
+
+      !** declaration of formal parameter list variables
+      REAL(dp) dyr
+      INTEGER jyr, jmo, jdy, jhr, jmi, jsc
+
+      !** declaration of local parameters
+      REAL(dp) eps11    ! 1.d-11 epsilon interval
+      PARAMETER (eps11=1.d-11)
+      REAL(dp) eps13    ! 1.d-13 epsilon interval
+      PARAMETER (eps13=1.d-13)
+
+      !** declaration of local variables
+      INTEGER ileap             ! leap year flag
+                                !   0 = no leap year, 1 = leap year
+      REAL(dp) xdy      ! digital day (0.0 - 365.99),
+                        !   (Jan 1, noon = 1.5)
+      REAL(dp) xhr      ! digital hour (0.0 - 23.99)
+      REAL(dp) xmi      ! digital minute (0.0 - 59.99)
+
+      INTEGER i1
+
+
+      !** START [§Sh]
+
+      !** isolate year [§b]
+      jyr = MIN(MAX( INT(ABS(dyr)), 0),9999)
+      !** check for leap year rule [§b]
+      ileap = 0
+      IF (( (MOD(jyr,4)==0) .AND. MOD(jyr,100)/=0 ) .OR. &
+     &     MOD(jyr,400)==0) ileap = 1
+
+      !** determine cumulated day as float and integer [§b]
+      xdy = ( DBLE(365+ileap) - eps13 ) * MOD( ABS(dyr),1.d0 ) + 1.d0
+      xdy = MIN( MAX(xdy,1.d0), (DBLE(366+ileap)-eps13))
+      jdy = INT(xdy)
+      !** init month ID to zero [§bh]
+      jmo = 0
+      !** FOR each month [§s]
+      DO i1 = 1,12
+         !** IF day number is within current month [§s]
+         IF ( jdy <= (ndaycm(i1) + MIN(i1-1,1)*ileap) ) THEN
+            !** set month ID to current one [§b]
+            jmo = i1
+            !** determine day ID [§b]
+            jdy = jdy - (ndaycm(i1-1) + MAX( MIN(i1-2,1),0 )*ileap)
+            !** exit loop [§bh]
+            EXIT
+         END IF
+      END DO
+      !** IF month ID is still zero [§s]
+      IF (jmo == 0) THEN
+         !** assume December 31 [§b]
+         jmo = 12
+         jdy = 31
+         xdy = DBLE(366+ileap) - eps11
+      END IF
+
+      !** get hour, minute, second [§bh]
+      xhr = MOD(xdy,1.d0)*24.d0
+      jhr = INT(xhr)
+      xmi = MOD(xhr,1.d0)*60.d0
+      jmi = INT(xmi)
+      jsc = INT( MOD(xmi,1.d0)*60.d0 )
+
+      !** END [§S]
+      RETURN
+      END SUBROUTINE
+      
 
 !> @brief Checks if a given year is a leap year
 !>
