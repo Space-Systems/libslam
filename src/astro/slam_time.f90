@@ -145,6 +145,7 @@ module slam_time
   public :: jd2mjd
   public :: yyddd2date
   public :: gd2dyr
+  public :: dyr2gd
 
   contains
 
@@ -2509,8 +2510,8 @@ end subroutine mjd2gd_std
   !** END
   return
   end function gd2dyr
-  
-  
+
+
 
 !> @brief 	The subroutine converts date from a digital year format (YYYY.YYYY)
 !!   		into Gregorian Date. The inverse funtion is called <I>gd2dyr</I>.
@@ -2604,7 +2605,7 @@ end subroutine mjd2gd_std
   !** end [§S]
   return
   end subroutine
-      
+
 
 !> @brief Checks if a given year is a leap year
 !>
