@@ -103,6 +103,10 @@ module slam_time
     module procedure gd2dyr
   end interface gd2dyr
 
+  interface dyr2gd
+    module procedure dyr2gd
+  end interface
+
   interface dayFraction2hms
     module procedure dayFraction2hms_int, dayFraction2hms_real
   end interface dayFraction2hms
