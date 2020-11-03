@@ -496,7 +496,7 @@ module slam_time
                        (i == 12) .or. (i == 13) .or.   &  ! hh
                        (i == 15) .or. (i == 16) .or.   &  ! mm
                        (i == 18) .or. (i == 19)) then     ! ss
-        if((ctest < 48).or.((ctest) > 57)) then
+        if((ctest < 48).or.(ctest > 57)) then
           !** not a digit
           return
         end if
@@ -519,8 +519,8 @@ module slam_time
       else if(i == 20) then
         !** check if there is a time zone designator
         if(len_trim(check) > 20) then
-          if((ctest /= 43).and.(ctest /= 45)) then
-            !** not a '+' or a '-'
+          if((ctest /= 43).and.(ctest /= 45).and.(ctest /= 46)) then
+            !** not a '+' or a '-' or a '.'
             return
           end if
         else
@@ -531,7 +531,7 @@ module slam_time
         end if
       !** checking '+/-hh:mm'
       else if((i == 21).or.(i == 22).or.(i == 24).or.(i == 25)) then ! hh
-        if((ctest < 48).or.(ctest < 57)) then
+        if((ctest < 48).or.(ctest > 57)) then
           !** not a digit
           return
         end if
@@ -2397,10 +2397,16 @@ end subroutine mjd2gd_std
     !** locals
     character(len=*), parameter :: csubid = 'tokenizeDate_std'
     character(len=25) :: ctime
-    integer :: hr_add   ! hours to add to get UTC
-    integer :: mi_add   ! minutes to add to get UTC
+    integer   :: hr_add           ! hours to add to get UTC
+    integer   :: mi_add           ! minutes to add to get UTC
+    integer   :: zone_index       ! pointer to the + or - sign
+    integer   :: decimal_index    ! pointer to the decimal fraction
+    integer   :: zulu_index       ! pointer to the Z at the end
+    integer   :: last_index       ! length of the string
+    integer   :: fraction_end_index ! points to the list fraction of the second + 1
+    real(dp)  :: second_fraction  ! milliseconds in the iso datetune
 
-    real(dp)  :: jd       ! temporary julian day
+    real(dp)  :: jd         ! temporary julian day
 
     if(isControlled()) then
       if(hasToReturn()) return
@@ -2418,14 +2424,35 @@ end subroutine mjd2gd_std
       read(ctime(15:16),*) mi
       read(ctime(18:19),*) sc
 
+      last_index = len_trim(ctime)
+      ! Check for the Zulu sign
+      zulu_index = index(ctime,'Z',.true.)
+      ! Check for the trailing + / - signs
+      zone_index = index(ctime,'+',.true.)
+      if (zone_index == 0) zone_index = index(ctime,'-',.true.)
+      if (zone_index < 20) zone_index = 0
+      ! Check for second fraction
+      decimal_index = index(ctime,'.')
+
+      if(decimal_index /= 0) then
+        fraction_end_index = last_index + 1
+        if (zulu_index /= 0) fraction_end_index = zulu_index
+        if (zone_index /= 0) fraction_end_index = zone_index
+        read(ctime(decimal_index+1:fraction_end_index-1),*) second_fraction
+        sc = sc + second_fraction
+      end if
+
       !** correct time zone
-      if(len_trim(ctime) > 20) then
-        read(ctime(21:22),*) hr_add
-        read(ctime(24:25),*) mi_add
+      if(index(ctime,'+',.true.) > 20 &
+        .or. index(ctime,'-',.true.) > 20) then
+
+        read(ctime(zone_index+1:zone_index+2),*) hr_add
+        ! Check for the minute correction
+        if (index(ctime,':',.true.) > 20) read(ctime(zone_index+3:zone_index+4),*) mi_add
 
         call gd2jd(yr, mo, dy, hr, mi, sc, jd)
 
-        if(ctime(20:20) == "+") then
+        if(ctime(zone_index:zone_index) == "+") then
           jd = jd + hr_add/24.d0 + mi_add/1440.d0
         else
           jd = jd - hr_add/24.d0 + mi_add/1440.d0
