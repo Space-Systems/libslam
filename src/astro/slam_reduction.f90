@@ -108,12 +108,9 @@ module slam_Reduction_class
         !----------------------------------------------------------------------
         procedure :: itrf2sez
         procedure :: sez2itrf
-        !procedure :: inertial2earthFixed
         procedure :: initEop
         procedure :: eci2uvw
         procedure :: uvw2eci
-        !procedure :: teme2eci
-        !procedure :: earthFixed2inertial
 
         !** getter
         procedure :: getEopFileName
