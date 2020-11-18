@@ -166,6 +166,9 @@ module slam_Reduction_class
         procedure :: teme2eci_rva
         generic :: teme2eci => teme2eci_rva
 
+        procedure :: eci2teme_rva
+        generic :: eci2teme => eci2teme_rva
+
         ! other
         procedure, private :: getEOPfromNGA
         procedure, private :: interpolateEOP
@@ -3208,15 +3211,10 @@ contains
     real(dp)  :: SEC, loc_TIME, UTC, DAT, TAI, TT
     real(dp), dimension(3,3) :: prMat ! precession matrix
     real(dp), dimension(3,3) :: nuMat ! nutation matrix
-!   real(dp), dimension(3) :: a_temp, a_temp2    ! intermediate accelerations in transformation
-!   real(dp), dimension(3) :: r_TIRS             ! radius vector in TIRS / km
     real(dp), dimension(3) :: r_TOD              ! radius vector TOD / km
     real(dp), dimension(3) :: r_MOD              ! radius vector MOD / km
     real(dp), dimension(3) :: v_TOD              ! velocity vector TOD / km
     real(dp), dimension(3) :: v_MOD              ! velocity vector MOD / km
-!   real(dp), dimension(3) :: v_TIRS             ! velocity vector in TIRS / km/s
-!   real(dp), dimension(3) :: v_temp, v_temp2    ! intermediate velocities in transformation
-!   real(dp), dimension(3) :: w_earth            ! earth rotation array
 
     type(eop_t) :: eop_intp   ! interpolated EOP for given date
 
@@ -3299,5 +3297,159 @@ contains
     return
 
   end subroutine teme2eci_rva
+
+  !!============================================================================
+  !
+  !> @anchor      eci2teme_rva
+  !!
+  !> @brief       Converting radius, velocity and acceleration from J2000 to TEME
+  !> @author      Christopher Kebschull
+  !!
+  !> @date        <ul>
+  !!                <li> 18.11.2020 (initial implementation) </li>
+  !!              </ul>
+  !!
+  !! @details     This routine converts a given state vector (radius, velocity and acceleration)
+  !!              in the J2000 frame to the TEME frame.
+  !!
+  !> @param[in]    r_J2000   radius vector in J2000 / km
+  !> @param[in]    v_J2000   velocity vector in J2000 / km/s
+  !> @param[in]    a_J2000   acceleration vector in J2000 / km/s**2
+  !> @param[in]    date      modified julian date
+  !> @param[out]   r_TEME    radius vector in TEME / km
+  !> @param[out]   v_TEME    velocity vector in TEME / km/s
+  !> @param[out]   a_TEME    acceleration vector in TEME / km/s**2
+  !!
+  !!------------------------------------------------------------------------------------------------
+  subroutine eci2teme_rva(   this,    &
+    r_J2000, &  ! --> DBL(3)  radius vector in J2000 / km
+    v_J2000, &  ! --> DBL(3)  velocity vector in J2000 / km/s
+    a_J2000, &  ! --> DBL(3)  acceleration vector in J2000 / km/s**2
+    date,    &  ! <-- DBL     modified julian date
+    r_TEME,  &  ! <-- DBL(3)  radius vector in TEME / km
+    v_TEME,  &  ! <-- DBL(3)  velocity vector in TEME / km/s
+    a_TEME  &  ! <-- DBL(3)  acceleration vector in TEME / km/s**2
+)
+
+implicit none
+
+!** interface
+!--------------------------------------------
+class(Reduction_type)               :: this
+real(dp), dimension(3), intent(in)  :: r_J2000
+real(dp), dimension(3), intent(in)  :: v_J2000
+real(dp), dimension(3), intent(in)  :: a_J2000
+real(dp), intent(in)                :: date
+real(dp), dimension(3), intent(out) :: r_TEME
+real(dp), dimension(3), intent(out) :: v_TEME
+real(dp), dimension(3), intent(out) :: a_TEME
+
+
+!--------------------------------------------
+
+character(len=*), parameter :: csubid = "eci2teme_rva"
+
+integer   :: idx         ! array index in EOP data
+integer   :: IY, IM, ID, IH, MIN, J
+!
+!   logical   :: ok          ! tells about the result of the txys_data lookup table call
+!
+real(dp)  :: eps         ! mean obliquity
+real(dp)  :: de80        ! delta obliquity from nutation theory
+real(dp)  :: deps        ! delta obliquity  from nutation theory + EOP correction
+real(dp)  :: dp80        ! delta psi from nutation theory
+real(dp)  :: dpsi        ! delta psi from nutation theory + EOP correction
+real(dp)  :: eqeq        ! equation of the equinox angle
+real(dp)  :: date_jd     ! julian day
+real(dp)  :: X, Y, S     ! X-Y-series for Precession/Nutation
+real(dp)  :: SEC, loc_TIME, UTC, DAT, TAI, TT
+real(dp), dimension(3,3) :: prMat ! precession matrix
+real(dp), dimension(3,3) :: nuMat ! nutation matrix
+real(dp), dimension(3) :: r_TOD              ! radius vector TOD / km
+real(dp), dimension(3) :: r_MOD              ! radius vector MOD / km
+real(dp), dimension(3) :: v_TOD              ! velocity vector TOD / km
+real(dp), dimension(3) :: v_MOD              ! velocity vector MOD / km
+
+type(eop_t) :: eop_intp   ! interpolated EOP for given date
+
+if(isControlled()) then
+if(hasToReturn()) return
+call checkIn(csubid)
+end if
+
+!** check whether EOP are already available
+if(.not. this%eopInitialized) then
+call setError(E_EOP_INIT, FATAL)
+return
+end if
+
+date_jd  = date + jd245
+idx      = int(date - eop_data(1)%mjd) + 1
+loc_TIME = mod(date, 1.d0)
+UTC      = date
+
+if (date .le. this%eop_last_obs_date) then
+call this%interpolateEOP(idx, loc_time, eop_intp)
+else
+call this%getEOPfromNGA(date, eop_intp)
+end if
+
+this%lod = eop_intp%lod    ! saving as module variable for given date
+
+call jd2gd(date_jd, IY, IM, ID, IH, MIN, SEC)
+call delta_AT (IY, IM, ID, loc_TIME, DAT, J)
+
+TAI  = UTC + DAT/86400.d0
+TT   = TAI + 32.184D0/86400.d0
+
+! UT1.
+!----------------------------------
+!TUT  = eop_intp%dut1/86400.D0
+!UT1  = date_jd + TUT
+
+! get precession matrix
+call iau_PMAT76(jd245, TT, prMat)
+
+! and now get state in inertial frame
+r_MOD = matmul(prMat, r_J2000)
+v_MOD = matmul(prMat, v_J2000)
+
+! apply nutation terms to convert from true-of-date to mean-of-date (MOD)
+call iau_NUT80(jd245, TT, dp80, de80)
+
+! add adjustments
+dpsi = dp80 + eop_intp%dpsi
+deps = de80 + eop_intp%deps
+
+! mean obliquity
+eps = iau_OBL80(jd245, TT)
+
+! get nutation rotation matrix
+call iau_NUMAT(eps, dpsi, deps, nuMat)
+
+! finally obtain MOD state
+r_TOD = matmul(nuMat, r_MOD)
+v_TOD = matmul(nuMat, v_MOD)
+
+! ===========================================
+! IAU-76/FK5
+! ===========================================
+
+! determine Equation of the Equinox
+eqeq = iau_EQEQ94(jd245+TT, 0.d0)
+
+! get TEME value by rotating in z direction by eqeq
+call rot3(r_TOD, eqeq, r_TEME)
+call rot3(v_TOD, eqeq, v_TEME)
+
+! FIX ME -- no velocity conversions yet...
+a_TEME = 0.d0
+
+if(isControlled()) then
+call checkOut(csubid)
+end if
+return
+
+end subroutine eci2teme_rva
 
 end module slam_Reduction_class
