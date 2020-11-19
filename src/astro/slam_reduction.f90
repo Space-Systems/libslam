@@ -3194,9 +3194,7 @@ contains
 
     integer   :: idx         ! array index in EOP data
     integer   :: IY, IM, ID, IH, MIN, J
-!
-!   logical   :: ok          ! tells about the result of the txys_data lookup table call
-!
+
     real(dp)  :: eps         ! mean obliquity
     real(dp)  :: de80        ! delta obliquity from nutation theory
     real(dp)  :: deps        ! delta obliquity  from nutation theory + EOP correction
@@ -3291,7 +3289,6 @@ contains
     if(isControlled()) then
       call checkOut(csubid)
     end if
-    return
 
   end subroutine teme2eci_rva
 
@@ -3319,134 +3316,131 @@ contains
   !!
   !!------------------------------------------------------------------------------------------------
   subroutine eci2teme_rva(   this,    &
-    r_J2000, &  ! --> DBL(3)  radius vector in J2000 / km
-    v_J2000, &  ! --> DBL(3)  velocity vector in J2000 / km/s
-    a_J2000, &  ! --> DBL(3)  acceleration vector in J2000 / km/s**2
+    r_J2000, &  ! <-- DBL(3)  radius vector in J2000 / km
+    v_J2000, &  ! <-- DBL(3)  velocity vector in J2000 / km/s
+    a_J2000, &  ! <-- DBL(3)  acceleration vector in J2000 / km/s**2
     date,    &  ! <-- DBL     modified julian date
-    r_TEME,  &  ! <-- DBL(3)  radius vector in TEME / km
-    v_TEME,  &  ! <-- DBL(3)  velocity vector in TEME / km/s
-    a_TEME  &  ! <-- DBL(3)  acceleration vector in TEME / km/s**2
-)
+    r_TEME,  &  ! --> DBL(3)  radius vector in TEME / km
+    v_TEME,  &  ! --> DBL(3)  velocity vector in TEME / km/s
+    a_TEME   &  ! --> DBL(3)  acceleration vector in TEME / km/s**2
+  )
 
-implicit none
+  implicit none
 
-!** interface
-!--------------------------------------------
-class(Reduction_type)               :: this
-real(dp), dimension(3), intent(in)  :: r_J2000
-real(dp), dimension(3), intent(in)  :: v_J2000
-real(dp), dimension(3), intent(in)  :: a_J2000
-real(dp), intent(in)                :: date
-real(dp), dimension(3), intent(out) :: r_TEME
-real(dp), dimension(3), intent(out) :: v_TEME
-real(dp), dimension(3), intent(out) :: a_TEME
+  !** interface
+  !--------------------------------------------
+  class(Reduction_type)               :: this
+  real(dp), dimension(3), intent(in)  :: r_J2000
+  real(dp), dimension(3), intent(in)  :: v_J2000
+  real(dp), dimension(3), intent(in)  :: a_J2000
+  real(dp), intent(in)                :: date
+  real(dp), dimension(3), intent(out) :: r_TEME
+  real(dp), dimension(3), intent(out) :: v_TEME
+  real(dp), dimension(3), intent(out) :: a_TEME
 
 
-!--------------------------------------------
+  !--------------------------------------------
 
-character(len=*), parameter :: csubid = "eci2teme_rva"
+  character(len=*), parameter :: csubid = "eci2teme_rva"
 
-integer   :: idx         ! array index in EOP data
-integer   :: IY, IM, ID, IH, MIN, J
-!
-!   logical   :: ok          ! tells about the result of the txys_data lookup table call
-!
-real(dp)  :: eps         ! mean obliquity
-real(dp)  :: de80        ! delta obliquity from nutation theory
-real(dp)  :: deps        ! delta obliquity  from nutation theory + EOP correction
-real(dp)  :: dp80        ! delta psi from nutation theory
-real(dp)  :: dpsi        ! delta psi from nutation theory + EOP correction
-real(dp)  :: eqeq        ! equation of the equinox angle
-real(dp)  :: date_jd     ! julian day
-real(dp)  :: X, Y, S     ! X-Y-series for Precession/Nutation
-real(dp)  :: SEC, loc_TIME, UTC, DAT, TAI, TT
-real(dp), dimension(3,3) :: prMat ! precession matrix
-real(dp), dimension(3,3) :: nuMat ! nutation matrix
-real(dp), dimension(3) :: r_TOD              ! radius vector TOD / km
-real(dp), dimension(3) :: r_MOD              ! radius vector MOD / km
-real(dp), dimension(3) :: v_TOD              ! velocity vector TOD / km
-real(dp), dimension(3) :: v_MOD              ! velocity vector MOD / km
+  integer   :: idx         ! array index in EOP data
+  integer   :: IY, IM, ID, IH, MIN, J
 
-type(eop_t) :: eop_intp   ! interpolated EOP for given date
+  real(dp)  :: eps         ! mean obliquity
+  real(dp)  :: de80        ! delta obliquity from nutation theory
+  real(dp)  :: deps        ! delta obliquity  from nutation theory + EOP correction
+  real(dp)  :: dp80        ! delta psi from nutation theory
+  real(dp)  :: dpsi        ! delta psi from nutation theory + EOP correction
+  real(dp)  :: eqeq        ! equation of the equinox angle
+  real(dp)  :: date_jd     ! julian day
+  real(dp)  :: X, Y, S     ! X-Y-series for Precession/Nutation
+  real(dp)  :: SEC, loc_TIME, UTC, DAT, TAI, TT
+  real(dp), dimension(3,3) :: prMat ! precession matrix
+  real(dp), dimension(3,3) :: nuMat ! nutation matrix
+  real(dp), dimension(3) :: r_TOD              ! radius vector TOD / km
+  real(dp), dimension(3) :: r_MOD              ! radius vector MOD / km
+  real(dp), dimension(3) :: v_TOD              ! velocity vector TOD / km
+  real(dp), dimension(3) :: v_MOD              ! velocity vector MOD / km
 
-if(isControlled()) then
-if(hasToReturn()) return
-call checkIn(csubid)
-end if
+  type(eop_t) :: eop_intp   ! interpolated EOP for given date
 
-!** check whether EOP are already available
-if(.not. this%eopInitialized) then
-call setError(E_EOP_INIT, FATAL)
-return
-end if
+  if(isControlled()) then
+    if(hasToReturn()) return
+    call checkIn(csubid)
+  end if
 
-date_jd  = date + jd245
-idx      = int(date - eop_data(1)%mjd) + 1
-loc_TIME = mod(date, 1.d0)
-UTC      = date
+  !** check whether EOP are already available
+  if(.not. this%eopInitialized) then
+    call setError(E_EOP_INIT, FATAL)
+    return
+  end if
 
-if (date .le. this%eop_last_obs_date) then
-call this%interpolateEOP(idx, loc_time, eop_intp)
-else
-call this%getEOPfromNGA(date, eop_intp)
-end if
+  date_jd  = date + jd245
+  idx      = int(date - eop_data(1)%mjd) + 1
+  loc_TIME = mod(date, 1.d0)
+  UTC      = date
 
-this%lod = eop_intp%lod    ! saving as module variable for given date
+  if (date .le. this%eop_last_obs_date) then
+    call this%interpolateEOP(idx, loc_time, eop_intp)
+  else
+    call this%getEOPfromNGA(date, eop_intp)
+  end if
 
-call jd2gd(date_jd, IY, IM, ID, IH, MIN, SEC)
-call delta_AT (IY, IM, ID, loc_TIME, DAT, J)
+  this%lod = eop_intp%lod    ! saving as module variable for given date
 
-TAI  = UTC + DAT/86400.d0
-TT   = TAI + 32.184D0/86400.d0
+  call jd2gd(date_jd, IY, IM, ID, IH, MIN, SEC)
+  call delta_AT (IY, IM, ID, loc_TIME, DAT, J)
 
-! UT1.
-!----------------------------------
-!TUT  = eop_intp%dut1/86400.D0
-!UT1  = date_jd + TUT
+  TAI  = UTC + DAT/86400.d0
+  TT   = TAI + 32.184D0/86400.d0
 
-! get precession matrix
-call iau_PMAT76(jd245, TT, prMat)
+  ! UT1.
+  !----------------------------------
+  !TUT  = eop_intp%dut1/86400.D0
+  !UT1  = date_jd + TUT
 
-! and now get state in inertial frame
-r_MOD = matmul(prMat, r_J2000)
-v_MOD = matmul(prMat, v_J2000)
+  ! get precession matrix
+  call iau_PMAT76(jd245, TT, prMat)
 
-! apply nutation terms to convert from true-of-date to mean-of-date (MOD)
-call iau_NUT80(jd245, TT, dp80, de80)
+  ! and now get state in inertial frame
+  r_MOD = matmul(prMat, r_J2000)
+  v_MOD = matmul(prMat, v_J2000)
 
-! add adjustments
-dpsi = dp80 + eop_intp%dpsi
-deps = de80 + eop_intp%deps
+  ! apply nutation terms to convert from true-of-date to mean-of-date (MOD)
+  call iau_NUT80(jd245, TT, dp80, de80)
 
-! mean obliquity
-eps = iau_OBL80(jd245, TT)
+  ! add adjustments
+  dpsi = dp80 + eop_intp%dpsi
+  deps = de80 + eop_intp%deps
 
-! get nutation rotation matrix
-call iau_NUMAT(eps, dpsi, deps, nuMat)
+  ! mean obliquity
+  eps = iau_OBL80(jd245, TT)
 
-! finally obtain MOD state
-r_TOD = matmul(nuMat, r_MOD)
-v_TOD = matmul(nuMat, v_MOD)
+  ! get nutation rotation matrix
+  call iau_NUMAT(eps, dpsi, deps, nuMat)
 
-! ===========================================
-! IAU-76/FK5
-! ===========================================
+  ! finally obtain MOD state
+  r_TOD = matmul(nuMat, r_MOD)
+  v_TOD = matmul(nuMat, v_MOD)
 
-! determine Equation of the Equinox
-eqeq = iau_EQEQ94(jd245+TT, 0.d0)
+  ! ===========================================
+  ! IAU-76/FK5
+  ! ===========================================
 
-! get TEME value by rotating in z direction by eqeq
-call rot3(r_TOD, eqeq, r_TEME)
-call rot3(v_TOD, eqeq, v_TEME)
+  ! determine Equation of the Equinox
+  eqeq = iau_EQEQ94(jd245+TT, 0.d0)
 
-! FIX ME -- no velocity conversions yet...
-a_TEME = 0.d0
+  ! get TEME value by rotating in z direction by eqeq
+  call rot3(r_TOD, eqeq, r_TEME)
+  call rot3(v_TOD, eqeq, v_TEME)
 
-if(isControlled()) then
-call checkOut(csubid)
-end if
-return
+  ! FIX ME -- no velocity conversions yet...
+  a_TEME = 0.d0
 
-end subroutine eci2teme_rva
+  if(isControlled()) then
+    call checkOut(csubid)
+  end if
+
+  end subroutine eci2teme_rva
 
 end module slam_Reduction_class
