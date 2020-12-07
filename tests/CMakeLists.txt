@@ -6,6 +6,9 @@ if (PostgreSQL_FOUND)
 	target_link_libraries(pgConnector-Fortran_Example slam-Fortran)
 endif(PostgreSQL_FOUND)
 
+add_executable(test_eci2teme test_eci2teme.f90)
+target_link_libraries(test_eci2teme slam-Fortran)
+
 add_executable(test_itrf2gcrf test_itrf2gcrf.f90)
 target_link_libraries(test_itrf2gcrf slam-Fortran)
 
