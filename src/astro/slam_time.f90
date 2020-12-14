@@ -1285,12 +1285,12 @@ module slam_time
     end if
 
     !  If suspiciously late year, set warning status but proceed.
-    if ( IY > IYV+5 ) then
-      cmess = "Provided year is more than five years beyond epoch "//  &
-             "of available leap seconds. This may lead to deviati"//  &
-             "ons."
-      call setError(E_SPECIAL, REMARK, (/cmess/))
-    end if
+    ! if ( IY > IYV+5 ) then
+    !   cmess = "Provided year is more than five years beyond epoch "//  &
+    !          "of available leap seconds. This may lead to deviati"//  &
+    !          "ons."
+    !   call setError(E_SPECIAL, REMARK, (/cmess/))
+    ! end if
 
     !  Combine year and month.
     M = 12*IY+IM
