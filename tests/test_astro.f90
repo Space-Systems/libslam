@@ -1,6 +1,6 @@
 !==============================================================================
 !!
-!> @anchor  test_mean2true
+!> @anchor  test_astro
 !!
 !> @brief   Program for testing transformation mean anomaly to true anomaly and vice versa.
 !!		S/R from slam_astro_conversions are used

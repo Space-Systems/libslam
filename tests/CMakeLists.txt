@@ -18,6 +18,9 @@ target_link_libraries(test_mean2true slam-Fortran)
 add_executable(test_astro test_astro.f90)
 target_link_libraries(test_astro slam-Fortran)
 
+add_executable(test_astro_conversions test_astro_conversions.f90)
+target_link_libraries(test_astro_conversions slam-Fortran)
+
 add_executable(test_quicksort test_quicksort.f90)
 target_link_libraries(test_quicksort slam-Fortran)
 
