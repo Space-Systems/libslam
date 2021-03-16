@@ -35,7 +35,8 @@ module slam_pg_driver
         module procedure retrieve_int_result,retrieve_int8_result, &
                             retrieve_real_result,retrieve_logical_result, &
                             retrieve_string_result,retrieve_int8_array_result, &
-                            retrieve_real_array_result,retrieve_real_2d_array_result
+                            retrieve_real_array_result,retrieve_real_2d_array_result, &
+                            retrieve_real_3d_array_result
     end interface retrieve_result
 
     interface to_db_array_string
@@ -562,6 +563,120 @@ contains
         return
 
     end subroutine retrieve_real_2d_array_result
+
+    !=========================================================================
+    !>
+    !>  @anchor     retrieve_real_3d_array_result
+    !>
+    !>  @brief      Returns a real 3D array result from the postgres query
+    !>  @author     Christopher Kebschull
+    !>
+    !>  @param[in]  i  indexes the row of the result matrix
+    !>  @param[in]  j  indexes the column of the result matrix
+    !>  @param[inout]  value  db entry converted to real array
+    !>
+    !>
+    !>  @date       <ul>
+    !>                <li>16.03.2021 (initial implementation)</li>
+    !>              </ul>
+    !>
+    !-------------------------------------------------------------------------
+    subroutine retrieve_real_3d_array_result(i,j,values)
+
+        implicit none
+
+        integer, intent(IN)             :: i                                    ! Identifies the row
+        integer, intent(IN)             :: j                                    ! Identifies the column
+        real(dp),dimension(:,:,:),allocatable,intent(INOUT)      :: values      ! Target variable
+        character(:),allocatable        :: cres                                 ! Result of the query
+        character(len=*), parameter     :: csubid = "retrieve_real_2d_array_result" ! Subroutine id
+        integer                         :: numFirstRecords                      ! Number of records in the first dimension of the array
+        integer                         :: numSecondRecords                     ! Number of records in the second dimension of the array
+        integer                         :: numThirdRecords                      ! Number of records in the third dimension of the array
+        integer                         :: iArray,iiArray,iiiArray              ! Index counter for the dimensions of the array
+        integer                         :: index,lastIndex                      ! Index of the character in a string
+
+        if(isControlled()) then
+            if(hasToReturn()) return
+            call checkIn(csubid)
+        end if
+
+        cres = get_value(res, i, j)
+
+        ! Make sure we have more than just {}
+        if (len(cres) > 2) then
+            ! Now count the number of commas ',' for the second dimension
+            numThirdRecords = 1
+            do index=3, len(cres)
+                ! Abort when the first } closes the first array fraction = size second dimension
+                if (cres(index:index) .eq. '}') exit
+                if (cres(index:index) .eq. ',') then
+                    numThirdRecords = numThirdRecords + 1
+                end if
+            end do
+            ! Count the number of braces '{' for the first dimension
+            numSecondRecords = 0 ! Ignore the first brace
+            do index=3, len(cres)-1
+                ! Abort when the first } closes the first array fraction = size second dimension
+                if (cres(index:index+1) .eq. '}}') exit
+                if (cres(index:index) .eq. '{') then
+                    numSecondRecords = numSecondRecords + 1
+                end if
+            end do
+            numFirstRecords = 0 ! Ignore the first brace
+            do index=2, len(cres)-1
+                ! Abort when the first } closes the first array fraction = size second dimension
+                if (cres(index:index+1) .eq. '{{') then
+                    numFirstRecords = numFirstRecords + 1
+                end if
+            end do
+
+            allocate(values(numFirstRecords,numSecondRecords,numThirdRecords))
+            ! Fill the array with the content from the DB
+            ! Jump over the '{'
+            lastIndex = 4
+            iArray = 1
+            iiArray = 1
+            iiiArray = 1
+            do index=4, len(cres)
+                if ((cres(index:index) .eq. ',' &
+                    .or. cres(index:index) .eq. '}') &
+                    .and. (.not. cres(index-1:index) .eq. "}," &
+                        .and. .not. cres(index-1:index) .eq. "}}")) then
+                    read (cres(lastIndex:index-1), *) values(iArray,iiArray,iiiArray)
+                    lastIndex = index + 1 ! Skip the next comma or brace
+                    iiiArray = iiiArray + 1
+                    if (iiiArray > numThirdRecords) then
+                        iiiArray = 1
+                        iiArray = iiArray + 1
+                    end if
+                    if (iiArray > numSecondRecords) then
+                        iiArray = 1
+                        iArray = iArray + 1
+                    end if
+                    if (iArray > numFirstRecords) then
+                        ! Exit the loop when all records are stored
+                        exit
+                    end if
+                else if (cres(index-2:index) .eq. "}},") then
+                    ! In case we encounter the end of a sub array we need to
+                    !  move the last index one character further to skip the next brace
+                    lastIndex = lastIndex + 5
+                else if (cres(index-1:index) .eq. "},") then
+                    ! In case we encounter the end of a sub array we need to
+                    !  move the last index one character further to skip the next brace
+                    lastIndex = lastIndex + 2
+                end if
+            end do
+        end if
+
+        if(isControlled()) then
+            call checkOut(csubid)
+        end if
+
+        return
+
+    end subroutine retrieve_real_3d_array_result
 
     !=========================================================================
     !>
