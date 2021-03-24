@@ -661,7 +661,7 @@ contains
                 else if (cres(index-2:index) .eq. "}},") then
                     ! In case we encounter the end of a sub array we need to
                     !  move the last index one character further to skip the next brace
-                    lastIndex = lastIndex + 5
+                    lastIndex = lastIndex + 4
                 else if (cres(index-1:index) .eq. "},") then
                     ! In case we encounter the end of a sub array we need to
                     !  move the last index one character further to skip the next brace
