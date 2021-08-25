@@ -101,6 +101,8 @@ program test_testing_class
         call message(test_name//': ERROR: testing_class%assert_equal(10.5d-3,10.d-3, "test_2_4", epsilon(1.d0))) should be false.', 1)
       end if
 
+      call test_double_absrel()
+
       !** test the epsilon set and get
       call testing_class%set_eps(0.1d-8)
 
@@ -208,5 +210,60 @@ program test_testing_class
       stop 0
     end if
 
+
+
+
+    contains
+
+
+
+
+    subroutine test_double_absrel()
+      ! Local parameters
+      real(DP), parameter :: EPS_REL = EPSILON(1.0D0)
+      real(DP), parameter :: EPS_ABS = EPSILON(1.0D0)
+
+      ! Local variables
+      integer  :: i
+      real(DP) :: x
+
+      ! Implementation
+      if (error) return
+
+      ! Check equivalence for small values
+      x = 0.0D0
+      do i = 1,10
+        x = x + 0.1D0
+      end do
+      x = x - 1.0D0
+
+      if (.NOT. testing_class%assert_equal(      x, 0.0D0, "test_absrel() 1", EPS_REL, EPS_ABS)) then
+        error = .TRUE.
+        call message(test_name//": ERROR: test_absrel() 1", 1)
+      end if
+
+      if (.NOT. testing_class%assert_equal(1.0D0+x, 1.0D0, "test_absrel() 2", EPS_REL, EPS_ABS)) then
+        error = .TRUE.
+        call message(test_name//": ERROR: test_absrel() 2", 1)
+      end if
+
+      ! The following test would fail, due to the iffy implementation of assert_equal_double_eps()
+      ! if (.NOT. testing_class%assert_equal(x, 0.0D0, "test_absrel() assert_equal_double_eps()", EPS_REL)) then
+      !   error = .TRUE.
+      !   call message(test_name//": ERROR: test_absrel() assert_equal_double_eps()", 1)
+      ! end if
+
+      ! Check equivalence for close values
+      if (      testing_class%assert_equal(1.0D0, 1.0D0 + 2.0D0*EPS_REL,"test_absrel() 3", EPS_REL, EPS_ABS)) then
+        error = .TRUE.
+        call message(test_name//": ERROR: test_absrel() 3", 1)
+      end if
+
+      if (.NOT. testing_class%assert_equal(1.0D0, 1.0D0 + 0.5D0*EPS_REL,"test_absrel() 4", EPS_REL, EPS_ABS)) then
+        error = .TRUE.
+        call message(test_name//": ERROR: test_absrel() 4", 1)
+      end if
+
+    end subroutine test_double_absrel
 
 end program
