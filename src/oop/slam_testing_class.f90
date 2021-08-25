@@ -28,11 +28,12 @@ module slam_testing_class
     real(dp), private :: eps_global
   contains
     final :: testing_finalize_internal
-    generic, public :: assert_equal => assert_equal_int, assert_equal_double, assert_equal_logical, assert_equal_double_eps, assert_equal_string
+    generic, public :: assert_equal => assert_equal_int, assert_equal_double, assert_equal_logical, assert_equal_double_eps, assert_equal_double_absrel, assert_equal_string
     procedure, private :: assert_equal_int => testing_assert_equal_int
     procedure, private :: assert_equal_double => testing_assert_equal_double
     procedure, private :: assert_equal_logical => testing_assert_equal_logical
     procedure, private :: assert_equal_double_eps => testing_assert_equal_double_eps
+    procedure, private :: assert_equal_double_absrel => testing_assert_equal_double_absrel
     procedure, private :: assert_equal_string => testing_assert_equal_string
 
     generic, public :: assert_unequal => assert_unequal_int, assert_unequal_double, assert_unequal_logical, assert_unequal_double_eps, assert_unequal_string
@@ -59,6 +60,7 @@ module slam_testing_class
   private :: testing_assert_equal_int
   private :: testing_assert_equal_double
   private :: testing_assert_equal_double_eps
+  private :: testing_assert_equal_double_absrel
   private :: testing_assert_equal_logical
   private :: testing_assert_equal_string
 
@@ -251,6 +253,44 @@ contains
     EXIT_PROCEDURE()
 
   end function testing_assert_equal_double_eps
+
+
+  function testing_assert_equal_double_absrel(this,x,y,name,eps_absolute,eps_relative) result(is_equal)
+    ! Check for almost equality of two floats by absolute and relative means. The absolute check shall enable
+    ! comparisons of numbers close to zero.
+
+    ! Transient variables
+    class(testing_type), intent(inout) :: this
+    real(DP),            intent(in)    :: x,y
+    character(*),        intent(in)    :: name
+    real(DP),            intent(in)    :: eps_absolute,eps_relative
+    logical                            :: is_equal
+
+    ! Local variables
+    real(DP) :: diff,large
+
+    ! Implementation
+    ENTER_NORMAL_PROCEDURE("testing_assert_equal_double_absrel")
+
+    ! Check for absolute difference (needed for small numbers close to zero)
+    diff = ABS(x - y)
+    if (diff <= eps_absolute) then
+      is_equal = .TRUE.
+      EXIT_PROCEDURE()
+      return
+    end if
+
+    ! Check for relative difference using the larger of the two values
+    large = MAX(ABS(x),ABS(y))
+    if (diff <= large * eps_relative) then
+      is_equal = .TRUE.
+    else
+      is_equal = .FALSE.
+      call this%set_any_error(name)
+    end if
+
+    EXIT_PROCEDURE()
+  end function testing_assert_equal_double_absrel
 
 
   function testing_assert_equal_string(this, first_value, second_value, test_sub_name) result (is_equal)
