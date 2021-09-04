@@ -2312,8 +2312,11 @@ contains
         !call gd2mjd ( IY, IM, ID, DJMJD0, DATE)
 
         if(ieee_is_nan(this%rotMatrixDate) .or. date /= this%rotMatrixDate) then ! conversion matrix not available for given date, compute...
-
           date_jd  = date + jd245
+          if (date < eop_data(1)%mjd) then
+            call setError(E_EOP_INDEX, FATAL)
+            return
+          end if
           idx      = int(date - eop_data(1)%mjd) + 1
           loc_TIME = mod(date, 1.d0)
           UTC      = date

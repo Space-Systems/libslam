@@ -143,6 +143,7 @@ module slam_error_handling
   integer, parameter, public :: E_EARTH_RADIUS         = 204  !< earth radius value not accepted
   integer, parameter, public :: E_EARTH_GRAVITY        = 205  !< earth gravity constant value not accepted
   integer, parameter, public :: E_EOP_INIT             = 206  !< Earth orientation parameters data not
+  integer, parameter, public :: E_EOP_INDEX            = 207  !< Earth orientation parameters data index too small
   !** time/coordinate conversions
   integer, parameter, public :: E_UTC                  = 300  !< UTC is not defined for dates earlier than Jan 1, 1961
   integer, parameter, public :: E_LEAP_SECOND          = 301  !< Leap seconds for propagations too far into future can not be considered
@@ -1041,6 +1042,12 @@ subroutine getErrorMessage(code, message, par)
       select case(errorLanguage)
         case default
           write(message(1:len(message)),'(a)') "Earth orientation parameters not initialized yet. Initialize first."
+      end select
+
+    case(E_EOP_INDEX)
+      select case(errorLanguage)
+        case default
+          write(message(1:len(message)),'(a)') "Earth orientation parameter cannot be retrieved. Requested date before 01/01/1962."
       end select
 
     case(E_SINGULAR_MATRIX)
