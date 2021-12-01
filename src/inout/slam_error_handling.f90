@@ -196,6 +196,7 @@ module slam_error_handling
   integer, parameter, public :: E_UNKNOWN_PARAMETER     = 521  !< unknown parameter
   integer, parameter, public :: E_UNKNOWN_FILE_FORMAT   = 522  !< unknown file format
   integer, parameter, public :: E_PLOT_CREATE           = 523  !< plot file cannot be created
+  integer, parameter, public :: E_GOTO_SUBSTRING        = 525  !< Substring could not be located in file
 
   !** numerical errors
   integer, parameter, public :: E_SINGULAR_MATRIX      = 604  !< singular matrix (e.g. during inversion)
@@ -909,6 +910,14 @@ subroutine getErrorMessage(code, message, par)
       select case(errorLanguage)
         case default
           write(message(1:len(message)),'(a)') "Plot cannot be created, as maximum number of plots exceeded."
+      end select
+
+    case(E_GOTO_SUBSTRING)
+      select case (errorLanguage)
+        case default
+          write(message(1:len(message)), "(8(A))") &
+            "Substring <", trim(local_par(1)), "> could not be located in unit <", trim(local_par(2)), ">", &
+            ", as unexpected IOS <", trim(local_par(3)), "> occurred."
       end select
 
     case(E_FRAME)

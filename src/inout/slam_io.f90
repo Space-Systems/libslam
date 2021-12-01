@@ -68,6 +68,8 @@ module slam_io
             slam_message,       &
             nitems
 
+  public :: goto_substring, count_entries
+
 
   !===================================================================
   !
@@ -1398,5 +1400,198 @@ integer function nitems(line)
   end do
 
 end function nitems
+
+
+
+
+subroutine goto_substring(fid, substring, line, restart, ios)
+  !--------------------------------------------------------------------------------------------------------
+  !> \brief Moves to the file position to and retrieves the line of an open file channel, which contains a
+  !!        given substring.
+  !!
+  !! \param[in]      fid        INT  File channel id
+  !! \param[in]      substring  INT  Substring to search for
+  !! \param[in,out]  line       CHA  Line containing the substring
+  !! \param[in]      restart    LOG  Start from the beginning of file
+  !! \param[out]     ios        INT  File read status at retrieval
+  !!
+  !! \par Notes:
+  !!      -# Without optional arguments, the current position is moved to the end of the line, which
+  !!         contains the desired substring. Per default, the search starts from the current position of
+  !!         the channel id.
+  !!      -# If the optional *line* argument is specified, the routine additionally retrieves the line
+  !!         containing the desired substring.
+  !!      -# If the optional *restart* argument is specified, the search for the substring starts either
+  !!         from the current position or from the beginning of the file, according to its value.
+  !!      -# If the optional *ios* argument is specified, the routine is run in try/catch-mode, such that
+  !!         it does not throw an error, if the substring was not found, but returns the status of
+  !!         retrieval only.
+  !<-------------------------------------------------------------------------------------------------------
+
+  ! Transient variables
+  integer,                intent(in)    :: fid
+  character(*),           intent(in)    :: substring
+  character(*), optional, intent(inout) :: line
+  logical,      optional, intent(in)    :: restart
+  integer,      optional, intent(out)   :: ios
+
+  ! Local parameters
+  character(*), parameter :: routine_ = "goto_substring"
+
+  ! Local variables
+  logical                      :: fid_is_open
+  integer                      :: ios2
+  character(256)               :: line2
+  character(256), dimension(3) :: buffer
+
+  ! Implementation
+  if(isControlled()) then
+    if(hasToReturn()) return
+    call checkIn(routine_)
+  end if
+
+  ! Check, if channel id is connected to a file
+  inquire(fid, opened=fid_is_open)
+
+  if (.NOT. fid_is_open) then
+    call setError(E_CHANNEL_NOT_CONNECTED, FATAL)
+    return
+  end if
+
+  ! Search for the specified substring
+  if (present(restart)) then
+    if (restart) rewind(fid)
+  end if
+
+  if (present(line)) then
+    line = ""
+  end if
+
+  do while(.TRUE.)
+    read(fid, "(A)", iostat=ios2) line2
+
+    if (ios2 /= 0) then
+      if (present(ios)) then
+        ! Try/catch return ios error
+        exit
+      else
+        ! Force fatal error
+        write(buffer(1), "(A)")  trim(substring)
+        write(buffer(2), "(I3)") fid
+        write(buffer(3), "(I3)") ios2
+        call setError(E_GOTO_SUBSTRING, FATAL, buffer)
+      end if
+    end if
+
+    if (index(line2, substring) > 0) then
+      if (present(line)) line = trim(line2)
+      exit
+    end if
+  end do
+
+  if (present(ios)) ios = ios2
+
+  if(isControlled()) call checkOut(routine_)
+  return
+
+end subroutine goto_substring
+
+function count_entries(fid, substring1, substring2, comment, restart) result(nentries)
+  !--------------------------------------------------------------------------------------------------------
+  !> \brief Count the number of non-comment entries between two lines containing a respective substring.
+  !!
+  !! \param[in]      fid         INT  File channel id
+  !! \param[in]      substring1  CHA  Substring to start count at
+  !! \param[in]      substring2  CHA  Substring to end count at
+  !! \param[in]      comment     CHA  Comment to differentiate between content and non-content lines
+  !! \param[in]      restart     LOG  Start search from the beginning of the file
+  !! \param[out]     nentries    INT  Number of content lines between substring1 and substring2
+  !!
+  !! \par Notes:
+  !!      -# Lines are handled as comments, if and only if the first non-empty characters correspond to
+  !!         the comment sequence. Lines containing non-comment data first, and the comment sequence at a
+  !!         later position only, are handled as valid content lines.
+  !!      -# The two lines containing *substring1* and *substring2* are not counted themselves, only the
+  !!         lines inbetween them are added to the counter.
+  !!      -# The file channel position after the call of this routine corresponds to the end of the line
+  !!         containing *substring2*.
+  !<-------------------------------------------------------------------------------------------------------
+
+  ! Transient variables
+  integer,                intent(in) :: fid
+  character(*),           intent(in) :: substring1
+  character(*),           intent(in) :: substring2
+  character(*),           intent(in) :: comment
+  logical,      optional, intent(in) :: restart
+  integer                            :: nentries
+
+  ! Local parameters
+  character(*), parameter :: routine_ = "count_entries"
+
+  ! Local variables
+  logical                      :: fid_is_open, restart2, found2
+  integer                      :: ios, len_comment, offset
+  character(256)               :: line, line2
+  character(256), dimension(3) :: buffer
+
+  ! Implementation
+  if(isControlled()) then
+    if(hasToReturn()) return
+    call checkIn(routine_)
+  end if
+
+  ! Check, if channel id is connected to a file
+  inquire(fid, opened=fid_is_open)
+
+  if (.NOT. fid_is_open) then
+    call setError(E_CHANNEL_NOT_CONNECTED, FATAL)
+    return
+  end if
+
+  ! Start at the first substring
+  if (present(restart)) then
+    restart2 = restart
+  else
+    restart2 = .FALSE.
+  end if
+
+  call goto_substring(fid, substring1, restart=restart2)
+
+  ! Search for the second substring
+  found2 = .FALSE.
+  nentries = 0
+  len_comment = len(comment)
+
+  do while (.TRUE.)
+    read(fid, "(A)", iostat=ios) line
+
+    if (ios /= 0) then
+      write(buffer(1), "(I3)") fid
+      call setError(E_FILE_READ_ERROR, FATAL, (/buffer(1)/))
+    end if
+
+    ! Stop, when the second substring was found
+    if (index(line, substring2) > 0) then
+      found2 = .TRUE.
+      exit
+    end if
+
+    ! Check, if line starts with a comment (later comments are accepted)
+    line2 = adjustl(line)
+    if (line2(1:len_comment) /= comment) nentries = nentries + 1
+  end do
+
+  ! Check, if the second substring was actually found
+  if (.NOT. found2) then
+    write(buffer(1), "(A)")  trim(substring2)
+    write(buffer(2), "(I3)") fid
+    write(buffer(3), "(I3)") ios
+    call setError(E_GOTO_SUBSTRING, FATAL, buffer)
+  endif
+
+  if(isControlled()) call checkOut(routine_)
+  return
+
+end function count_entries
 
 end module slam_io

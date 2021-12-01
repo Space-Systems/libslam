@@ -33,3 +33,6 @@ target_link_libraries(test_testing_class slam-Fortran)
 add_executable(test_time_class test_time_class.f90)
 # Link the slam library (called libslam after it was build) into the executable
 target_link_libraries(test_time_class slam-Fortran)
+
+add_executable(test_fid_operations test_fid_operations.f90)
+target_link_libraries(test_fid_operations slam-Fortran)

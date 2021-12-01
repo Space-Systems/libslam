@@ -113,6 +113,8 @@ add_test(NAME test_astro COMMAND test_astro)
 add_test(NAME test_time_class COMMAND test_time_class)
 # set_tests_properties (test_time_class PROPERTIES PASS_REGULAR_EXPRESSION "All tests passed" FAIL_REGULAR_EXPRESSION "Some tests failed")
 
+add_test(NAME test_fid_operations COMMAND test_fid_operations)
+
 # Generate API documentation with Doxygen
 find_package(Doxygen)
 if(DOXYGEN_FOUND)
