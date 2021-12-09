@@ -677,7 +677,9 @@ end function openFile
 !> @brief     Getting next input line, ignoring lines with special character
 !!
 !! @details   This function reads over lines containing substring 'ccom'
-!!            if ipos > 0, ccom is only accepted if starting in that column
+!!            if ipos > 0, ccom is only accepted if starting in that column.
+!!            If *ipos == -1*, the first non-blank characters are compared with
+!!            *ccom*.
 !!
 !> @author    Vitali Braun
 !!
@@ -686,7 +688,8 @@ subroutine nxtbuf (             &        ! read in next uncommented line from fi
                     ccom,       &        ! <-- C*(*)  comment string to search for
                     ipos,       &        ! <-- INT    demanded position of comment
                                          !            string within input line
-                                         !            (0 = no distinct position)
+                                         !            ( 0 = no distinct position)
+                                         !            (-1 = first non-blank characters)
                     ichn,       &        ! <-- INT    I/O channel number to read from
                     cbuf,       &        ! --> C*(*)  Next file line as string which
                                          !            does not contain ccom.
@@ -714,6 +717,7 @@ subroutine nxtbuf (             &        ! read in next uncommented line from fi
   !** declaration of local variables
   character(len=2)      :: cunum        ! character buffer for I/O unit number
   character(len=mbflen) :: cbufrd       ! read buffer
+  character(len=mbflen) :: cbufrd_temp  ! Temporary read buffer
 
   integer :: ichr              ! character position loop counter
   integer :: iloop             ! loop couter
@@ -721,6 +725,7 @@ subroutine nxtbuf (             &        ! read in next uncommented line from fi
   integer :: ios               ! I/O state index
   logical :: lopen             ! flag for I/O state (.TRUE. = file is opened)
   integer :: nchr              ! number of valid characters in string
+  integer :: len_comment       ! String length of the comment
 
   !** START
   if(isControlled()) then
@@ -741,6 +746,7 @@ subroutine nxtbuf (             &        ! read in next uncommented line from fi
   end if
 
   !++++++++++++++++ FOR all datasets
+  len_comment = len(ccom)
   do iloop = 1,mxloop
 
     !** read line into character buffer
@@ -768,6 +774,10 @@ subroutine nxtbuf (             &        ! read in next uncommented line from fi
       inx = index(cbufrd(ipos:),ccom)
       !** if pattern position is not 1: exit loop
       if (inx/=1) exit
+    else if (ipos == -1) then
+      ! First non-blank characters are considered for comment checking
+      cbufrd_temp = adjustl(cbufrd)
+      if (cbufrd_temp(1:len_comment) /= ccom) exit
     else
       !** consider total string
       inx = index(cbufrd(:),ccom)
