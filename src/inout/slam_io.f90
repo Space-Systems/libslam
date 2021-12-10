@@ -68,7 +68,7 @@ module slam_io
             slam_message,       &
             nitems
 
-  public :: goto_substring, count_entries
+  public :: goto_substring, count_entries, parse_from_fid
 
 
   !===================================================================
@@ -1603,5 +1603,78 @@ function count_entries(fid, substring1, substring2, comment, restart) result(nen
   return
 
 end function count_entries
+
+subroutine parse_from_fid(fid, comment, value, designator)
+  !---------------------------------------------------------------------
+  !> \brief Read the next non-comment line from the channel ID and read
+  !> a single value of arbitrary data type from the line.
+  !!
+  !! \param[in]      fid         INT  File channel ID
+  !! \param[in]      comment     CHA  Comment string
+  !! \param[in,out]  value       *    Value to read from line
+  !! \param[in]      designator  CHA  Designator of value for error
+  !!                                  handling
+  !!
+  !! \par Notes:
+  !!      -# The following data types are supported: real(DP), integer,
+  !!         logical, character.
+  !!
+  !! \par Called:
+  !!      - nxtbuf()
+  !<--------------------------------------------------------------------
+
+  ! Transient variables
+  integer,      intent(in)    :: fid
+  character(*), intent(in)    :: comment
+  class(*),     intent(inout) :: value
+  character(*), intent(in)    :: designator
+
+  ! Local parameters
+  character(*), parameter :: ROUTINE_ = "parse_from_fid"
+
+  ! Local variables
+  integer        :: ios
+  character(11)  :: value_type
+  character(256) :: line
+
+  ! Implementation
+  if(isControlled()) then
+    if(hasToReturn()) return
+    call checkIn(ROUTINE_)
+  end if
+
+  ! Read the next non-comment line
+  call nxtbuf(comment, -1, fid, line)
+
+  ! Try to parse the variable from the line
+  select type (value)
+    type is (real(DP))
+      value_type = "real(DP)"
+      read(line, *, iostat=ios) value
+    type is (integer)
+      value_type = "integer"
+      read(line, *, iostat=ios) value
+    type is (logical)
+      value_type = "logical"
+      read(line, *, iostat=ios) value
+    type is (character(*))
+      value_type = "character"
+      read(line, *, iostat=ios) value
+    class default
+      call setError(E_DATA_TYPE, FATAL, (/designator/))
+  end select
+
+  ! Check for parsing errors
+  if (ios /= 0) then
+    call setError(E_PARSE, FATAL, (/&
+      "Reading <"//trim(value_type)//"> variable <"// &
+      trim(designator)//"> from line <"//trim(line)//"> failed."/) &
+    )
+  end if
+
+  if (isControlled()) call checkOut(ROUTINE_)
+  return
+
+end subroutine parse_from_fid
 
 end module slam_io

@@ -39,3 +39,6 @@ target_link_libraries(test_fid_operations slam-Fortran)
 
 add_executable(test_io_nxtbuf test_io_nxtbuf.f90)
 target_link_libraries(test_io_nxtbuf slam-Fortran)
+
+add_executable(test_io_parse_from_fid test_io_parse_from_fid.f90)
+target_link_libraries(test_io_parse_from_fid slam-Fortran)
