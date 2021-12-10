@@ -138,6 +138,7 @@ module slam_error_handling
   integer, parameter, public :: E_MISSING_PARAMETER  = 6  !< e.g. if an optional parameter is missing when calling a function
   integer, parameter, public :: E_FRAME              = 7  !< reference frame not defined
   integer, parameter, public :: E_PARSE              = 8  !< parsing error, e.g. when parsing data from a string
+  integer, parameter, public :: E_DATA_TYPE          = 9  !< Non-supported data type for generic variables
 
   !** perturbation methods errors (codes 200)
   integer, parameter, public :: E_EARTH_RADIUS         = 204  !< earth radius value not accepted
@@ -930,6 +931,14 @@ subroutine getErrorMessage(code, message, par)
       select case(errorLanguage)
         case default  ! english as default
           write(message(1:len(message)),'(a)') "Parsing error: '"//trim(local_par(1))//"'."
+      end select
+
+    case(E_DATA_TYPE)
+      select case (errorLanguage)
+        case default
+          write(message(1:len(message)), "(3(A))") &
+            "Unsupported data type for generic variable <", &
+            trim(local_par(1)), ">."
       end select
 
     case(E_EOP_INPUT)
