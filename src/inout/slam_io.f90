@@ -69,6 +69,7 @@ module slam_io
             nitems
 
   public :: goto_substring, count_entries, parse_from_fid
+  public :: sprint
 
 
   !===================================================================
@@ -1676,5 +1677,59 @@ subroutine parse_from_fid(fid, comment, value, designator)
   return
 
 end subroutine parse_from_fid
+
+function sprint(val, fmt) result(str)
+  !--------------------------------------------------------------------------------------------------------
+  !> \brief Format data value into string.
+  !!
+  !! \param[in]      val  *    Data value of arbitrary type
+  !! \param[in]      fmt  CHA  Format specifier
+  !!
+  !! \par Notes:
+  !!      -# The following data value types are supported: integer, real, real(DP), character.
+  !!      -# The maximum supported field length is 256 characters (length of the output string).
+  !!      -# A fatal error is thrown, if the data type is not recognised or the writing failed.
+  !<-------------------------------------------------------------------------------------------------------
+
+  ! Transient variables
+  class(*),     intent(in) :: val
+  character(*), intent(in) :: fmt
+  character(256)           :: str
+
+  ! Local parameters
+  character(*), parameter :: ROUTINE_ = "sprint"
+
+  ! Local variables
+  integer :: ios
+
+  ! Implementation
+  if (isControlled()) then
+    if (hasToReturn()) return
+    call checkIn(ROUTINE_)
+  end if
+
+  select type (val)
+    type is (integer)
+      write(str, "("//fmt//")", iostat=ios) val
+    type is (real)
+      write(str, "("//fmt//")", iostat=ios) val
+    type is (real(DP))
+      write(str, "("//fmt//")", iostat=ios) val
+    type is (character(*))
+      write(str, "("//fmt//")", iostat=ios) val
+    class default
+      call setError(E_DATA_TYPE, FATAL, (/"Not supported data type."/))
+  end select
+
+  if (ios /= 0) then
+    call setError(E_PARSE, FATAL,                              &
+      (/"Write error with format  string <"//trim(fmt)//">."/) &
+    )
+  end if
+
+  if (isControlled()) call checkOut(ROUTINE_)
+  return
+
+end function sprint
 
 end module slam_io

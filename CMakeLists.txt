@@ -116,6 +116,7 @@ add_test(NAME test_time_class COMMAND test_time_class)
 add_test(NAME test_fid_operations    COMMAND test_fid_operations    )
 add_test(NAME test_io_nxtbuf         COMMAND test_io_nxtbuf         )
 add_test(NAME test_io_parse_from_fid COMMAND test_io_parse_from_fid )
+add_test(NAME test_io_sprint         COMMAND test_io_sprint         )
 
 # Generate API documentation with Doxygen
 find_package(Doxygen)
