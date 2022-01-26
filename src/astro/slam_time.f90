@@ -2444,7 +2444,7 @@ end subroutine mjd2gd_std
         if (zulu_index /= 0) fraction_end_index = zulu_index
         if (zone_index /= 0) fraction_end_index = zone_index
         read(ctime(decimal_index+1:fraction_end_index-1),*) second_fraction
-        sc = sc + second_fraction
+        sc = sc + second_fraction / 1000.d0
       end if
 
       !** correct time zone
