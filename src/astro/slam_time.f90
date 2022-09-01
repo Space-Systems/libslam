@@ -55,7 +55,8 @@ module slam_time
   real(dp), parameter, public :: sec_per_day = 86400.d0
   real(dp), parameter, public :: hours_per_day = 24.d0
   real(dp), parameter, public :: minutes_per_day = 1440.d0
-  real(dp), parameter, public :: mean_days_per_gregorian_year = 365.25d0 ! mean numbers of days in a gregorion calendar
+  real(dp), parameter, public :: mean_days_per_gregorian_year = 365.25d0           ! mean numbers of days in a gregorion calendar
+  real(dp), parameter, public :: julian_century = mean_days_per_gregorian_year*1d2 ! number of days in a julian century
 
   !** for function gd2dyr
   integer, public :: ndaycm(0:12)=(/  0,  31,  59,  90, 120, 151, 181, &

@@ -54,9 +54,10 @@ module slam_math
   real(dp), parameter :: rad2deg = 180.d0/pi          ! radians to degrees
   real(dp), parameter :: deg2rad = pi/180.d0          ! degrees to radians
 
-  real(dp), parameter :: as2rad       = deg2rad/3.6d3 ! arcseconds to radians
-  real(dp), parameter :: as_in_circle = 1296.d3       ! arcseconds in full circle
-  real(dp), parameter :: mas2rad      = as2rad*1.d-6  ! microarcseconds to radians
+  real(dp), parameter :: as2rad       = deg2rad/3.6d3       ! arcseconds to radians
+  real(dp), parameter :: as_in_circle = 1296.d3             ! arcseconds in full circle
+  real(dp), parameter :: as2deg       = 360.d0/as_in_circle ! arcseconds to degrees
+  real(dp), parameter :: mas2rad      = as2rad*1.d-6        ! microarcseconds to radians
   real(dp), parameter :: infinite     = 999999.9d0
   real(dp), parameter :: undefined    = 999999.1d0
 
