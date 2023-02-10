@@ -6,6 +6,7 @@
 !!
 !> @author  Vitali Braun (VB)
 !> @author  Christopher Kebschull (CHK)
+!> @author  Andrea Turchi (AT)
 !!
 !> @date    <ul>
 !!            <li>VB:  06.11.2014 (added doxygen special commands)</li>
@@ -13,6 +14,8 @@
 !!            <li>VB:  01.02.2015 (corrected IAU reduction naming to 'IAU 2000/2006') </li>
 !!            <li>VB:  28.06.2015 (added conversion TEME <-> J2000.0) </li>
 !!            <li>CHK: 10.07.2015 (added to libslam) </li>
+!!            <li>AT:  10.02.2023 (modified to work even without NGA EOPP coefficients) </li>
+!!            <li>AT:  10.02.2023 (added function to get UT1-UTC delta time in output) </li>
 !!          </ul>
 !!
 !> @copyright Institute of Space Systems / TU Braunschweig
@@ -87,6 +90,7 @@ module slam_Reduction_class
         logical :: convertVelocity                                              !> converting also velocity in GCRF <--> ITRF conversion
         logical :: eopInitialized                                               !> initialization flag
         logical :: usingPNLookup                                                !> if set to .true., lookup tables will be used to determine parameters X, Y and s for PN
+        logical :: flag_nga_coeff                                               !> indicates whether NGA EOPP coefficients are available or not.
 
         real(dp) :: gmst                                                        ! greenwich mean sidereal time (rad)
         real(dp) :: gmst_epoch                                                  ! epoch associated with gmst (mjd)
@@ -124,6 +128,7 @@ module slam_Reduction_class
         procedure :: getRotationMatrixRC2IT
         procedure :: getRotationMatrixRC2TI
         procedure :: getRotationMatrixRC2IEE
+        procedure :: getDeltaTime
 
         !** setter
         procedure :: setEopInitFlag
@@ -273,10 +278,15 @@ contains
 
         idx = int(time_mjd - eop_data(1)%mjd) + 1
 
-        if (time_mjd <= this%eop_last_obs_date) then
-            call this%interpolateEOP(idx, mod(time_mjd,1.d0), eop_intp)
+        ! if (time_mjd <= this%eop_last_obs_date) then
+        !     call this%interpolateEOP(idx, mod(time_mjd,1.d0), eop_intp)
+        ! else
+        !     call this%getEOPfromNGA(time_mjd, eop_intp)
+        ! end if
+        if (time_mjd > this%eop_last_obs_date .and. this%flag_nga_coeff) then
+          call this%getEOPfromNGA(time_mjd, eop_intp)
         else
-            call this%getEOPfromNGA(time_mjd, eop_intp)
+          call this%interpolateEOP(idx, mod(time_mjd,1.d0), eop_intp)
         end if
 
         getPolarMotion(1) = eop_data(idx)%xp  ! already in radians
@@ -661,10 +671,15 @@ contains
         !write(*,*) "dy06 = ", eop_data(idx)%dy06
         !write(*,*) "xp   = ", eop_data(idx)%xp
         !write(*,*) "yp   = ", eop_data(idx)%yp
-        if (time_mjd .le. this%eop_last_obs_date) then
-          call this%interpolateEOP(idx, loc_time, eop_intp)
-        else
+        ! if (time_mjd .le. this%eop_last_obs_date) then
+        !   call this%interpolateEOP(idx, loc_time, eop_intp)
+        ! else
+        !   call this%getEOPfromNGA(time_mjd, eop_intp)
+        ! end if
+        if (time_mjd > this%eop_last_obs_date .and. this%flag_nga_coeff) then
           call this%getEOPfromNGA(time_mjd, eop_intp)
+        else
+          call this%interpolateEOP(idx, loc_TIME, eop_intp)
         end if
 
         this%lod = eop_intp%lod    ! saving as module variable for given date
@@ -1821,6 +1836,7 @@ contains
     !> @author    Vitali Braun
     !> @date      <ul>
     !!              <li>22.01.2014: added doxygen comments and implemented default values for path and file name of data file</li>
+    !!              <li>10.02.2023: modified to work even without NGA EOPP coefficients
     !!            </ul>
     !!
     !> @param[in] cpath       Path to read EOP data from
@@ -1958,62 +1974,77 @@ contains
         !** read first and last obs date as well as first and last
         !   predicted date in data file
         !------------------------------------------
+        this%flag_nga_coeff = .false.
         do
-
-            read(ich,'(A)',iostat=ios) cbuf
-            ! reading records as specified in http://earth-info.nga.mil/GandG/sathtml/eoppdoc.html
-            if (index(cbuf,'BEGIN NGA_COEFFICIENTS').ne.0) then
-                ! read line first of five
-                read(ich,'(A)',iostat=ios) cbuf
-                read(cbuf(1:10),*) ta
-                read(cbuf(11:20),*) A
-                read(cbuf(21:30),*) B
-                read(cbuf(31:40),*) C(1)
-                read(cbuf(41:50),*) C(2)
-                read(cbuf(51:60),*) D(1)
-                read(cbuf(61:70),*) D(2)
-                read(cbuf(71:76),*) P(1)
-                ! read line second of five
-                read(ich,'(A)',iostat=ios) cbuf
-                read(cbuf(1:6),*) P(2)
-                read(cbuf(7:16),*) E
-                read(cbuf(17:26),*) F
-                read(cbuf(27:36),*) G(1)
-                read(cbuf(37:46),*) G(2)
-                read(cbuf(47:56),*) H(1)
-                read(cbuf(57:66),*) H(2)
-                read(cbuf(67:72),*) Q(1)
-                read(cbuf(73:78),*) Q(2)
-                ! read line third of five
-                read(ich,'(A)',iostat=ios) cbuf
-                read(cbuf(1:10),*) tb
-                read(cbuf(11:20),*) ngaI
-                read(cbuf(21:30),*) ngaJ
-                read(cbuf(31:40),*) K(1)
-                read(cbuf(41:50),*) K(2)
-                read(cbuf(51:60),*) K(3)
-                read(cbuf(61:70),*) K(4)
-                ! read line four of five
-                read(ich,'(A)',iostat=ios) cbuf
-                read(cbuf(1:10),*) L(1)
-                read(cbuf(11:20),*) L(2)
-                read(cbuf(21:30),*) L(3)
-                read(cbuf(31:40),*) L(4)
-                read(cbuf(41:49),*) R(1)
-                read(cbuf(50:58),*) R(2)
-                read(cbuf(59:67),*) R(3)
-                read(cbuf(68:76),*) R(4)
-                ! read line five of five
-                read(ich,'(A)',iostat=ios) cbuf
-                read(cbuf(1:4),*) dat
-                read(cbuf(5:9),*) EOPPWk
-                read(cbuf(10:15),*) teff
-            else if (index(cbuf,'END NGA_COEFFICIENTS').ne.0) then
-                exit
-            endif
+          read(ich,'(A)',iostat=ios) cbuf
+          if (index(cbuf,'BEGIN NGA_COEFFICIENTS').ne.0) then
+            this%flag_nga_coeff = .true.
+            exit
+          else if (index(cbuf,'BEGIN OBSERVED').ne.0) then
+            exit
+          end if
         end do
-
+        
         rewind(ich)
+
+        if (this%flag_nga_coeff) then
+          do
+
+              read(ich,'(A)',iostat=ios) cbuf
+              ! reading records as specified in http://earth-info.nga.mil/GandG/sathtml/eoppdoc.html
+              if (index(cbuf,'BEGIN NGA_COEFFICIENTS').ne.0) then
+                  ! read line first of five
+                  read(ich,'(A)',iostat=ios) cbuf
+                  read(cbuf(1:10),*) ta
+                  read(cbuf(11:20),*) A
+                  read(cbuf(21:30),*) B
+                  read(cbuf(31:40),*) C(1)
+                  read(cbuf(41:50),*) C(2)
+                  read(cbuf(51:60),*) D(1)
+                  read(cbuf(61:70),*) D(2)
+                  read(cbuf(71:76),*) P(1)
+                  ! read line second of five
+                  read(ich,'(A)',iostat=ios) cbuf
+                  read(cbuf(1:6),*) P(2)
+                  read(cbuf(7:16),*) E
+                  read(cbuf(17:26),*) F
+                  read(cbuf(27:36),*) G(1)
+                  read(cbuf(37:46),*) G(2)
+                  read(cbuf(47:56),*) H(1)
+                  read(cbuf(57:66),*) H(2)
+                  read(cbuf(67:72),*) Q(1)
+                  read(cbuf(73:78),*) Q(2)
+                  ! read line third of five
+                  read(ich,'(A)',iostat=ios) cbuf
+                  read(cbuf(1:10),*) tb
+                  read(cbuf(11:20),*) ngaI
+                  read(cbuf(21:30),*) ngaJ
+                  read(cbuf(31:40),*) K(1)
+                  read(cbuf(41:50),*) K(2)
+                  read(cbuf(51:60),*) K(3)
+                  read(cbuf(61:70),*) K(4)
+                  ! read line four of five
+                  read(ich,'(A)',iostat=ios) cbuf
+                  read(cbuf(1:10),*) L(1)
+                  read(cbuf(11:20),*) L(2)
+                  read(cbuf(21:30),*) L(3)
+                  read(cbuf(31:40),*) L(4)
+                  read(cbuf(41:49),*) R(1)
+                  read(cbuf(50:58),*) R(2)
+                  read(cbuf(59:67),*) R(3)
+                  read(cbuf(68:76),*) R(4)
+                  ! read line five of five
+                  read(ich,'(A)',iostat=ios) cbuf
+                  read(cbuf(1:4),*) dat
+                  read(cbuf(5:9),*) EOPPWk
+                  read(cbuf(10:15),*) teff
+              else if (index(cbuf,'END NGA_COEFFICIENTS').ne.0) then
+                  exit
+              endif
+          end do
+
+          rewind(ich)
+        end if
 
         !** read first and last obs date as well as first and last
         !   predicted date in data file
@@ -2328,10 +2359,15 @@ contains
           !write(*,*) "dy06 = ", eop_data(idx)%dy06
           !write(*,*) "xp   = ", eop_data(idx)%xp
           !write(*,*) "yp   = ", eop_data(idx)%yp
-          if (date .le. this%eop_last_obs_date) then
-            call this%interpolateEOP(idx, loc_time, eop_intp)
-          else
+          ! if (date .le. this%eop_last_obs_date) then
+          !   call this%interpolateEOP(idx, loc_time, eop_intp)
+          ! else
+          !   call this%getEOPfromNGA(date, eop_intp)
+          ! end if
+          if (date > this%eop_last_obs_date .and. this%flag_nga_coeff) then
             call this%getEOPfromNGA(date, eop_intp)
+          else
+            call this%interpolateEOP(idx, loc_TIME, eop_intp)
           end if
 
           this%lod = eop_intp%lod    ! saving as module variable for given date
@@ -3229,10 +3265,15 @@ contains
     loc_TIME = mod(date, 1.d0)
     UTC      = date
 
-    if (date .le. this%eop_last_obs_date) then
-      call this%interpolateEOP(idx, loc_time, eop_intp)
-    else
+    ! if (date .le. this%eop_last_obs_date) then
+    !   call this%interpolateEOP(idx, loc_time, eop_intp)
+    ! else
+    !   call this%getEOPfromNGA(date, eop_intp)
+    ! end if
+    if (date > this%eop_last_obs_date .and. this%flag_nga_coeff) then
       call this%getEOPfromNGA(date, eop_intp)
+    else
+      call this%interpolateEOP(idx, loc_TIME, eop_intp)
     end if
 
     this%lod = eop_intp%lod    ! saving as module variable for given date
@@ -3380,10 +3421,15 @@ contains
   loc_TIME = mod(date, 1.d0)
   UTC      = date
 
-  if (date .le. this%eop_last_obs_date) then
-    call this%interpolateEOP(idx, loc_time, eop_intp)
-  else
+  ! if (date .le. this%eop_last_obs_date) then
+  !   call this%interpolateEOP(idx, loc_time, eop_intp)
+  ! else
+  !   call this%getEOPfromNGA(date, eop_intp)
+  ! end if
+  if (date > this%eop_last_obs_date .and. this%flag_nga_coeff) then
     call this%getEOPfromNGA(date, eop_intp)
+  else
+    call this%interpolateEOP(idx, loc_TIME, eop_intp)
   end if
 
   this%lod = eop_intp%lod    ! saving as module variable for given date
@@ -3442,5 +3488,46 @@ contains
   end if
 
   end subroutine eci2teme_rva
+
+  !-----------------------------------------------------------------------------------------------
+    !
+    !> @anchor      getDeltaTime
+    !!
+    !> @brief       Get the delta time UT1-UTC for a given date
+    !> @author      Andrea Turchi
+    !!
+    !> @date        <ul>
+    !!                <li> 10.02.2023: initial design</li>
+    !!              </ul>
+    !> @param[in]   time_mjd      ! current MJD for requested delta_t
+    !!
+    !-----------------------------------------------------------------------------------------------
+  function getDeltaTime(this, time_mjd)
+
+    class(Reduction_type) :: this
+    real(dp)              :: getDeltaTime
+    real(dp), intent(in)  :: time_mjd
+
+    integer     :: idx                                                      ! index in EOP data array
+    type(eop_t) :: eop_intp
+
+    idx = int(time_mjd - eop_data(1)%mjd) + 1
+
+    ! if (time_mjd <= this%eop_last_obs_date) then
+    !     call this%interpolateEOP(idx, mod(time_mjd,1.d0), eop_intp)
+    ! else
+    !     call this%getEOPfromNGA(time_mjd, eop_intp)
+    ! end if
+    if (time_mjd > this%eop_last_obs_date .and. this%flag_nga_coeff) then
+      call this%getEOPfromNGA(time_mjd, eop_intp)
+    else
+      call this%interpolateEOP(idx, mod(time_mjd,1.d0), eop_intp)
+    end if
+
+    getDeltaTime = eop_data(idx)%dut1  ! already in seconds
+
+    return
+
+end function getDeltaTime
 
 end module slam_Reduction_class
