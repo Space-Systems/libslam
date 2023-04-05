@@ -3526,6 +3526,10 @@ contains
 
     getDeltaTime = eop_data(idx)%dut1  ! already in seconds
 
+    if (eop_data(idx)%dut1 == 0.d0) then
+      write(*,*) "WARNING: after END PREDICTED a null value is returned!"
+    end if
+
     return
 
 end function getDeltaTime
