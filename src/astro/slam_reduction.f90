@@ -128,7 +128,7 @@ module slam_Reduction_class
         procedure :: getRotationMatrixRC2IT
         procedure :: getRotationMatrixRC2TI
         procedure :: getRotationMatrixRC2IEE
-        procedure :: getDeltaTime
+        procedure :: get_delta_time
 
         !** setter
         procedure :: setEopInitFlag
@@ -3490,22 +3490,22 @@ contains
   end subroutine eci2teme_rva
 
   !-----------------------------------------------------------------------------------------------
-    !
-    !> @anchor      getDeltaTime
-    !!
-    !> @brief       Get the delta time UT1-UTC for a given date
-    !> @author      Andrea Turchi
-    !!
-    !> @date        <ul>
-    !!                <li> 10.02.2023: initial design</li>
-    !!              </ul>
-    !> @param[in]   time_mjd      ! current MJD for requested delta_t
-    !!
-    !-----------------------------------------------------------------------------------------------
-  function getDeltaTime(this, time_mjd)
+  !
+  !> @anchor      get_delta_time
+  !!
+  !> @brief       Get the delta time UT1-UTC for a given date
+  !> @author      Andrea Turchi
+  !!
+  !> @date        <ul>
+  !!                <li> 10.02.2023: initial design</li>
+  !!              </ul>
+  !> @param[in]   time_mjd      ! current MJD for requested delta_t
+  !!
+  !-----------------------------------------------------------------------------------------------
+  function get_delta_time(this, time_mjd)
 
     class(Reduction_type) :: this
-    real(dp)              :: getDeltaTime
+    real(dp)              :: get_delta_time
     real(dp), intent(in)  :: time_mjd
 
     integer     :: idx                                                      ! index in EOP data array
@@ -3513,25 +3513,20 @@ contains
 
     idx = int(time_mjd - eop_data(1)%mjd) + 1
 
-    ! if (time_mjd <= this%eop_last_obs_date) then
-    !     call this%interpolateEOP(idx, mod(time_mjd,1.d0), eop_intp)
-    ! else
-    !     call this%getEOPfromNGA(time_mjd, eop_intp)
-    ! end if
     if (time_mjd > this%eop_last_obs_date .and. this%flag_nga_coeff) then
       call this%getEOPfromNGA(time_mjd, eop_intp)
     else
-      call this%interpolateEOP(idx, mod(time_mjd,1.d0), eop_intp)
+      call this%interpolateEOP(idx, mod(time_mjd, 1.d0), eop_intp)
     end if
 
-    getDeltaTime = eop_data(idx)%dut1  ! already in seconds
+    get_delta_time = eop_data(idx)%dut1  ! already in seconds
 
     if (eop_data(idx)%dut1 == 0.d0) then
-      write(*,*) "WARNING: after END PREDICTED a null value is returned!"
+      call slam_message('WARNING: after END PREDICTED a null value is returned!',  LOG_AND_STDOUT)
     end if
 
     return
 
-end function getDeltaTime
+  end function get_delta_time
 
 end module slam_Reduction_class
