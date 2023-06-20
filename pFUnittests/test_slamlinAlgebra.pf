@@ -1,0 +1,63 @@
+!>------------------------------------------------------------------------------------
+!!
+!> @brief   Linear Algebra Tests
+!!
+!! @anchor  test_slamlinAlgebra
+!!
+!> @author  Arkene Chouchene (VB)
+!> @author  Daniel Lück (CHK)
+!!
+!> 
+!!            
+!!            
+!!         
+!!
+!> @copyright Institute of Space Systems / TU Braunschweig
+!!
+!!------------------------------------------------------------------------------------
+module test_slamlinAlgebra
+    use funit
+    use slam_linAlgebra 
+    use iso_fortran_env
+    use slam_error_handling
+    use slam_strings, only: toLowercase, toUppercase
+    use slam_types
+    use slam_math, only: pi, halfPi, twoPi, rad2deg, deg2rad
+
+     
+        
+      
+    implicit none
+      
+        contains
+      
+        @test
+        subroutine test_invert_matrix()
+          ! Tests the invert_matrix subroutine
+          ! Reference Data : Mathlab
+          real(dp), dimension(3, 3) :: A
+          real(dp), dimension(3, 3) :: A_inv
+          character(len=20) :: method = 'CHOLESKY'
+          real(dp), dimension(3, 3) :: expected
+      
+          ! Initialize the input matrix A
+          A = reshape((/1.0_dp, 2.0_dp, 3.0_dp, &
+                       4.0_dp, 5.0_dp, 6.0_dp, &
+                       7.0_dp, 8.0_dp, 9.0_dp/), (/3, 3/))
+      
+          ! Call the invert_matrix subroutine
+                       
+          call invert_matrix(A, A_inv, method)
+      
+          ! Define the expected inverse matrix
+          
+          expected = reshape((/-0.9444444444444444_dp, 0.4444444444444444_dp, -0.1111111111111111_dp, &
+                                    0.2222222222222222_dp, -0.1111111111111111_dp, 0.1111111111111111_dp, &
+                                    -0.05555555555555555_dp, 0.05555555555555555_dp, -0.1111111111111111_dp/), (/3, 3/))
+      
+          ! Check if the computed inverse matrix matches the expected inverse matrix
+          @assertRelativelyEqual(A_inv, expected, tolerance=1.0e-10_dp)
+        end subroutine test_invert_matrix
+      
+      end module test_slamlinAlgebra
+      

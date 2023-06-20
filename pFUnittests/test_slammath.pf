@@ -1,0 +1,81 @@
+!>------------------------------------------------------------------------------------
+!!
+!> @brief   Math Tests 
+!!
+!! @anchor  test_slammath
+!!
+!> @author  Arkene Chouchene (VB)
+!> @author  Daniel Lück (CHK)
+!!
+!> 
+!!            
+!!            
+!!         
+!!
+!> @copyright Institute of Space Systems / TU Braunschweig
+!!
+!!------------------------------------------------------------------------------------
+module test_slammath
+    use funit
+    use slam_math
+    use iso_fortran_env
+    use slam_error_handling
+    use slam_strings, only: toLowercase, toUppercase
+    use slam_types
+    use slam_math, only: pi, halfPi, twoPi, rad2deg, deg2rad
+
+     
+        
+      
+    implicit none
+      
+        contains
+      
+        @test
+        subroutine test_crossFunction()
+          ! Tests the cross function
+          ! Reference Data : Mathlab
+          ! Declare variables
+          real(dp), dimension(3) :: result
+          real(dp), dimension(3) :: vec1
+          real(dp), dimension(3) :: vec2
+          real(dp), dimension(3) :: expected_result
+          
+          ! Initialize the input vectors
+          vec1 = (/1.0_dp, 2.0_dp, 3.0_dp/)
+          vec2 = (/4.0_dp, 5.0_dp, 6.0_dp/)
+          
+          ! Call the cross function
+          result = cross(vec1, vec2)
+          
+          ! Define the expected result
+          expected_result = (/-3.0_dp, 6.0_dp, -3.0_dp/)
+          
+          ! Check if the computed result matches the expected result
+          @assertRelativelyEqual(result, expected_result, tolerance=1.0e-10_dp)
+
+        end subroutine test_crossFunction
+
+        @test
+  subroutine test_magFunction()
+    ! Tests the mag function
+    ! Reference Data : Mathlab
+    ! Declare variables
+    real(dp) :: result
+    real(dp), dimension(3) :: vec
+    real(dp) :: expected_result
+    
+    ! Initialize the input vector
+    vec = (/1.0_dp, 2.0_dp, 3.0_dp/)
+    
+    ! Call the mag function
+    result = mag(vec)
+    
+    ! Define the expected result
+    expected_result = sqrt(14.0_dp)
+    
+    ! Check if the computed result matches the expected result
+    @assertRelativelyEqual(result, expected_result, tolerance=1.0e-10_dp)
+  end subroutine test_magFunction
+      
+      end module test_slammath

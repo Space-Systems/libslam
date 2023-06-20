@@ -118,6 +118,14 @@ add_test(NAME test_io_nxtbuf         COMMAND test_io_nxtbuf         )
 add_test(NAME test_io_parse_from_fid COMMAND test_io_parse_from_fid )
 add_test(NAME test_io_sprint         COMMAND test_io_sprint         )
 
+#Create test scenarios
+find_package(PFUNIT REQUIRED)
+#enable_testing()
+
+if (PFUNIT_FOUND)
+add_subdirectory(pFUnittests)
+endif()
+
 # Generate API documentation with Doxygen
 find_package(Doxygen)
 if(DOXYGEN_FOUND)
