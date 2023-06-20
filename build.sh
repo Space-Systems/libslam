@@ -3,6 +3,7 @@
 # Define how to build the libraries and executables:
 BUILD_TYPE=Debug
 Fortran_COMPILER=gfortran
+git submodule update --init --recursive 
 ################################################################################
 #                                                                              #
 #                                Build pFUnit                                  #
