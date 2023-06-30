@@ -2070,7 +2070,6 @@ module slam_time
 !! @details     This routine converts a given JD as derived type 'time_t'
 !!              into MJD.
 !!------------------------------------------------------------------------------------------------
-  
   subroutine jd2mjd(date)
 
     type(time_t), intent(inout) :: date
