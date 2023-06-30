@@ -1,0 +1,83 @@
+ - Reading Earth orientation parameters...
+WARNING in subroutine initEOP:
+  Earth orientation parameter data file has to be updated.
+REMARK in subroutine initEOP:
+  Using Earth orientation parameter data file from '2020-03-27T05:00:13Z'.
+WARNING in subroutine initEOP:
+  Earth orientation parameters are not available for part of the specified time interval. Note that predictions are available only until 2020-09-23T00:00:00Z. For dates beyond this epoch, EOP are set to zero.
+Input file 'data/txys_interpolation.dat' (unit =  79) OPENED.
+ - Reading interpolated Earth orientation parameters...
+File 'data/txys_interpolation.dat'  (unit =  79) CLOSED.
+File 'data/eop19620101.txt'  (unit =  77) CLOSED.
+Input file 'data/eop19620101.txt' (unit =  77) OPENED.
+ - Reading Earth orientation parameters...
+WARNING in subroutine initEOP:
+  Earth orientation parameter data file has to be updated.
+REMARK in subroutine initEOP:
+  Using Earth orientation parameter data file from '2020-03-27T05:00:13Z'.
+WARNING in subroutine initEOP:
+  Earth orientation parameters are not available for part of the specified time interval. Note that predictions are available only until 2020-09-23T00:00:00Z. For dates beyond this epoch, EOP are set to zero.
+Input file 'data/txys_interpolation.dat' (unit =  79) OPENED.
+ - Reading interpolated Earth orientation parameters...
+File 'data/txys_interpolation.dat'  (unit =  79) CLOSED.
+File 'data/eop19620101.txt'  (unit =  77) CLOSED.
+Input file 'data/eop19620101.txt' (unit =  77) OPENED.
+ - Reading Earth orientation parameters...
+WARNING in subroutine initEOP:
+  Earth orientation parameter data file has to be updated.
+REMARK in subroutine initEOP:
+  Using Earth orientation parameter data file from '2020-03-27T05:00:13Z'.
+WARNING in subroutine initEOP:
+  Earth orientation parameters are not available for part of the specified time interval. Note that predictions are available only until 2020-09-23T00:00:00Z. For dates beyond this epoch, EOP are set to zero.
+Input file 'data/txys_interpolation.dat' (unit =  79) OPENED.
+ - Reading interpolated Earth orientation parameters...
+File 'data/txys_interpolation.dat'  (unit =  79) CLOSED.
+File 'data/eop19620101.txt'  (unit =  77) CLOSED.
+Input file 'data/eop19620101.txt' (unit =  77) OPENED.
+ - Reading Earth orientation parameters...
+WARNING in subroutine initEOP:
+  Earth orientation parameter data file has to be updated.
+REMARK in subroutine initEOP:
+  Using Earth orientation parameter data file from '2020-03-27T05:00:13Z'.
+WARNING in subroutine initEOP:
+  Earth orientation parameters are not available for part of the specified time interval. Note that predictions are available only until 2020-09-23T00:00:00Z. For dates beyond this epoch, EOP are set to zero.
+Input file 'data/txys_interpolation.dat' (unit =  79) OPENED.
+ - Reading interpolated Earth orientation parameters...
+File 'data/txys_interpolation.dat'  (unit =  79) CLOSED.
+File 'data/eop19620101.txt'  (unit =  77) CLOSED.
+Input file 'data/eop19620101.txt' (unit =  77) OPENED.
+ - Reading Earth orientation parameters...
+WARNING in subroutine initEOP:
+  Earth orientation parameter data file has to be updated.
+REMARK in subroutine initEOP:
+  Using Earth orientation parameter data file from '2020-03-27T05:00:13Z'.
+WARNING in subroutine initEOP:
+  Earth orientation parameters are not available for part of the specified time interval. Note that predictions are available only until 2020-09-23T00:00:00Z. For dates beyond this epoch, EOP are set to zero.
+Input file 'data/txys_interpolation.dat' (unit =  79) OPENED.
+ - Reading interpolated Earth orientation parameters...
+File 'data/txys_interpolation.dat'  (unit =  79) CLOSED.
+File 'data/eop19620101.txt'  (unit =  77) CLOSED.
+Input file 'data/eop19620101.txt' (unit =  77) OPENED.
+ - Reading Earth orientation parameters...
+WARNING in subroutine initEOP:
+  Earth orientation parameter data file has to be updated.
+REMARK in subroutine initEOP:
+  Using Earth orientation parameter data file from '2020-03-27T05:00:13Z'.
+WARNING in subroutine initEOP:
+  Earth orientation parameters are not available for part of the specified time interval. Note that predictions are available only until 2020-09-23T00:00:00Z. For dates beyond this epoch, EOP are set to zero.
+Input file 'data/txys_interpolation.dat' (unit =  79) OPENED.
+ - Reading interpolated Earth orientation parameters...
+File 'data/txys_interpolation.dat'  (unit =  79) CLOSED.
+File 'data/eop19620101.txt'  (unit =  77) CLOSED.
+Input file 'data/eop19620101.txt' (unit =  77) OPENED.
+ - Reading Earth orientation parameters...
+WARNING in subroutine initEOP:
+  Earth orientation parameter data file has to be updated.
+REMARK in subroutine initEOP:
+  Using Earth orientation parameter data file from '2020-03-27T05:00:13Z'.
+WARNING in subroutine initEOP:
+  Earth orientation parameters are not available for part of the specified time interval. Note that predictions are available only until 2020-09-23T00:00:00Z. For dates beyond this epoch, EOP are set to zero.
+Input file 'data/txys_interpolation.dat' (unit =  79) OPENED.
+ - Reading interpolated Earth orientation parameters...
+File 'data/txys_interpolation.dat'  (unit =  79) CLOSED.
+File 'data/eop19620101.txt'  (unit =  77) CLOSED.

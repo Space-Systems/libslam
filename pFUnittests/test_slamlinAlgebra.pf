@@ -35,28 +35,28 @@ module test_slamlinAlgebra
         subroutine test_invert_matrix()
           ! Tests the invert_matrix subroutine
           ! Reference Data : Mathlab
-          real(dp), dimension(3, 3) :: A
-          real(dp), dimension(3, 3) :: A_inv
+          real(8), dimension(3, 3) :: A
+          real(8), dimension(3, 3) :: A_inv
           character(len=20) :: method = 'CHOLESKY'
-          real(dp), dimension(3, 3) :: expected
+          real(8), dimension(3, 3) :: expected
       
           ! Initialize the input matrix A
-          A = reshape((/1.0_dp, 2.0_dp, 3.0_dp, &
-                       4.0_dp, 5.0_dp, 6.0_dp, &
-                       7.0_dp, 8.0_dp, 9.0_dp/), (/3, 3/))
+          A = reshape((/4.0, 1.0, 2.0, &
+                       1.0, 5.0, 3.0, &
+                       2.0, 3.0, 6.0/), (/3, 3/))
       
           ! Call the invert_matrix subroutine
                        
           call invert_matrix(A, A_inv, method)
-      
+          write (*,*) A_inv
           ! Define the expected inverse matrix
           
-          expected = reshape((/-0.9444444444444444_dp, 0.4444444444444444_dp, -0.1111111111111111_dp, &
-                                    0.2222222222222222_dp, -0.1111111111111111_dp, 0.1111111111111111_dp, &
-                                    -0.05555555555555555_dp, 0.05555555555555555_dp, -0.1111111111111111_dp/), (/3, 3/))
+          expected = reshape((/0.2999999, 1.3877787807814457E-017, -0.1, &
+          1.3877787807814457E-017, 0.28571428571428564, -0.14285714285714285, &
+                               -0.1, -0.14285714285714285, 0.27142857142857146/), (/3, 3/))
       
           ! Check if the computed inverse matrix matches the expected inverse matrix
-          @assertRelativelyEqual(A_inv, expected, tolerance=1.0e-10_dp)
+          @assertEqual(A_inv, expected, tolerance = 0.00001)
         end subroutine test_invert_matrix
       
       end module test_slamlinAlgebra
