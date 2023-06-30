@@ -23,6 +23,10 @@ jobs:
       with:
         submodules: true
 
+    - name: Configure CMake pFUnit
+      # Configure pFUnit
+      run: cmake -S pFUnit -B ${{github.workspace}}/pFUnit/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_OpenMP_SUPPORT=OFF -DENABLE_POSTGRESQL_SUPPORT=OFF
+
     - name: Build pFUnit
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/pFUnit/build --config ${{env.BUILD_TYPE}}
