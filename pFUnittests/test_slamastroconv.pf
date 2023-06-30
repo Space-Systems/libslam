@@ -1,21 +1,18 @@
-
-!>------------------------------------------------------------------------------------
+!==============================================================================
+!
+!> @anchor  test_slamastroconv
 !!
-!> @brief   Astro Conversions Tests
+!> @brief   Program for testing most important functions and subroutines in slam_astro_conversions
 !!
-!! @anchor  test_slamastroconv
+!> @author  Arkene Chouchene (AC)
 !!
-!> @author  Arkene Chouchene (VB)
-!> @author  Daniel Lück (CHK)
+!> @date    <ul>
+!!            <li>20.05.2023 (initial design)</li>
+!!          </ul>
 !!
-!> 
-!!            
-!!            
-!!         
-!!
-!> @copyright Institute of Space Systems / TU Braunschweig
-!!
-!!------------------------------------------------------------------------------------
+!! @details Program for testing slam_astro_conversion functions and subroutines 
+!! Sources and Examples are mentioned above every test
+!------------------------------------------------------------------------
 module test_slamastroconv
     use funit
     use slam_astro_conversions
@@ -25,213 +22,215 @@ module test_slamastroconv
     use slam_strings, only: toLowercase, toUppercase
     use slam_types
     use slam_math, only: pi, halfPi, twoPi, rad2deg, deg2rad
-
-     
         
-      
     implicit none
-      
-        contains
-            
-            @test
-            subroutine test_rv2coe_long()
-              ! Tests the rv2coe_long subroutine
-              ! Reference Data : Astropy
-              ! Declare variables
-              real(dp), dimension(3) :: R, V
-              real(dp) :: P, A, Ecc, Incl, Omega, Argp, Nu, M, ArgLat, TrueLon, LonPer
-              integer :: otype
-              real(dp) :: expected_P, expected_A, expected_Ecc, expected_Incl, expected_Omega, expected_Argp
-              real(dp) :: expected_Nu, expected_M, expected_ArgLat, expected_TrueLon, expected_LonPer
-              
-              ! Initialize the input vectors
-              R = (/-3485.799126707284, -5898.652976745232, 835.9701786284777/)
-              V = (/-1.3525457950562447, -0.2804534841971075, -7.4721873681232385/)
-              
-              ! Call the rv2coe_long subroutine
-              call rv2coe_long(R, V, P, A, Ecc, Incl, Omega, Argp, Nu, M, ArgLat, TrueLon, LonPer, otype)
-              
-              ! Define the expected values
-              expected_P = 6901.6785750976933_dp
-              expected_A = 6901.7162837732567_dp
-              expected_Ecc = 0.23374487008203386E-2_dp
-              expected_Incl = 1.7046673456441539_dp
-              expected_Omega = 1.0206263838483220_dp
-              expected_Argp = 1.4007653593235663_dp
-              expected_Nu = 1.6183154619738946_dp
-              expected_M = 1.6136454570550320_dp
-              expected_ArgLat = 999999.09999999998_dp
-              expected_TrueLon = 999999.09999999998_dp
-              expected_LonPer = 999999.09999999998_dp
-              
-              ! Check if the computed values match the expected values
-              @assertRelativelyEqual(P, expected_P, tolerance=1.0e-7_dp)
-              @assertRelativelyEqual(A, expected_A, tolerance=1.0e-7_dp)
-              @assertRelativelyEqual(Ecc, expected_Ecc, tolerance=1.0e-7_dp)
-              @assertRelativelyEqual(Incl, expected_Incl, tolerance=1.0e-7_dp)
-              @assertRelativelyEqual(Omega, expected_Omega, tolerance=1.0e-7_dp)
-              @assertRelativelyEqual(Argp, expected_Argp, tolerance=1.0e-7_dp)
-              @assertRelativelyEqual(Nu, expected_Nu, tolerance=1.0e-7_dp)
-              @assertRelativelyEqual(M, expected_M, tolerance=1.0e-7_dp)
-              @assertRelativelyEqual(ArgLat, expected_ArgLat, tolerance=1.0e-7_dp)
-              @assertRelativelyEqual(TrueLon, expected_TrueLon, tolerance=1.0e-7_dp)
-              @assertRelativelyEqual(LonPer, expected_LonPer, tolerance=1.0e-7_dp)
-              
-            end subroutine test_rv2coe_long
-              
-              @test
-              subroutine test_rv2coe_short()
-                ! Tests the rv2coe_short subroutine
-                ! Reference Data : Astropy
-                ! Declare variables
-                type(state_t) :: car
-                type(kepler_t) :: kep
-                type(time_t) :: epoch, expected_epoch
-                integer :: otype
-                real(dp) :: expected_semipar, expected_sma, expected_ecc, expected_inc, expected_raan
-                real(dp) :: expected_aop, expected_tran, expected_man, expected_arglat, expected_truelon, expected_lonper
-                real(dp) :: semipar
-                ! Initialize the input state
-                car%R = (/-3485.799126707284, -5898.652976745232, 835.9701786284777/)
-                car%V = (/-1.3525457950562447, -0.2804534841971075, -7.4721873681232385/)
-                
-                car%epoch%year = 2022
-                car%epoch%month = 10
-                car%epoch%day = 16
-                car%epoch%hour = 4
-                car%epoch%minute = 0
-                car%epoch%second = 47_dp
-                
-                ! Call the rv2coe_short subroutine
-                call rv2coe_short(car, kep, otype)
-                
-                ! Define the expected values
-                expected_semipar = 0
-                expected_sma = 6901.7162837732567_dp
-                expected_ecc = 0.23374487008203386E-2_dp
-                expected_inc = 1.7046673456441539_dp
-                expected_raan = 1.0206263838483220_dp
-                expected_aop = 1.4007653593235663_dp
-                expected_tran = 1.6183154619738946_dp
-                expected_man = 1.6136454570550320_dp
-                expected_arglat = 999999.09999999998_dp
-                expected_truelon = 999999.09999999998_dp
-                expected_lonper = 999999.09999999998_dp
-                expected_epoch%year = 2022
-                expected_epoch%month = 10
-                expected_epoch%day = 16
-                expected_epoch%hour = 4
-                expected_epoch%minute = 0
-                expected_epoch%second = 47_dp 
-                
-                ! Check if the computed values match the expected values
-                @assertEqual(semipar, expected_semipar)
-                @assertRelativelyEqual(kep%sma, expected_sma, tolerance=1.0e-7_dp)
-                @assertRelativelyEqual(kep%ecc, expected_ecc, tolerance=1.0e-7_dp)
-                @assertRelativelyEqual(kep%inc, expected_inc, tolerance=1.0e-7_dp)
-                @assertRelativelyEqual(kep%raan, expected_raan, tolerance=1.0e-7_dp)
-                @assertRelativelyEqual(kep%aop, expected_aop, tolerance=1.0e-7_dp)
-                @assertRelativelyEqual(kep%tran, expected_tran, tolerance=1.0e-7_dp)
-                @assertRelativelyEqual(kep%man, expected_man, tolerance=1.0e-7_dp)
-                @assertRelativelyEqual(kep%arglat, expected_arglat, tolerance=1.0e-7_dp)
-                @assertRelativelyEqual(kep%truelon, expected_truelon, tolerance=1.0e-7_dp)
-                @assertRelativelyEqual(kep%lonper, expected_lonper, tolerance=1.0e-7_dp)
-                
-                
-              end subroutine test_rv2coe_short
-            
-                @test
-                subroutine test_coe2rv_long()
-                  ! Tests the coe2rv_long subroutine
-                  ! Reference Data : Astropy
-                  ! Declare variables
-                  real(dp) :: P_in, Ecc, Incl, Omega_in, Argp_in, Nu_in, ArgLat, TrueLon, LonPer
-                  real(dp), dimension(3) :: expected_R, expected_V
-                  real(dp), dimension(3) :: R, V
-                  
-                  ! Initialize the input values
-                  P_in = 6901.6785750976933_dp
-                  Ecc = 0.23374487008203386E-2_dp
-                  Incl = 1.7046673456441539_dp
-                  Omega_in = 1.0206263838483220_dp
-                  Argp_in = 1.4007653593235663_dp
-                  Nu_in = 1.6183154619738946_dp
-                  ArgLat = 999999.09999999998_dp
-                  TrueLon = 999999.09999999998_dp
-                  LonPer = 999999.09999999998_dp
-                  
-                  ! Call the coe2rv_long subroutine
-                  call coe2rv_long(P_in, Ecc, Incl, Omega_in, Argp_in, Nu_in, ArgLat, TrueLon, LonPer, R, V)
-                  
-                  ! Define the expected values
-                  expected_R = (/-3485.799126707284, -5898.652976745232, 835.9701786284777/)
-                  expected_V = (/-1.3525457950562447, -0.2804534841971075, -7.4721873681232385/)
-                  
-                  ! Check if the computed values match the expected values
-                  @assertRelativelyEqual(R, expected_R, tolerance=1.0e-7_dp)
-                  @assertRelativelyEqual(V, expected_V, tolerance=1.0e-7_dp)
-                  
-                end subroutine test_coe2rv_long
-
-                  @test
-                  subroutine test_getGeodeticLatLon()
-                    ! Tests the getGeodeticLatLon subroutine
-                    
-                    ! Declare variables
-                    real(dp), dimension(3) :: r_ecef, expected_r_ecef
-                    real(dp) :: altitude, expected_altitude
-                    real(dp) :: lat, expected_lat
-                    real(dp) :: lon, expected_lon
-                    
-                    ! Initialize the input values
-                    r_ecef = (/6378.0_dp, 6378.0_dp, 0.0_dp/)
-                    
-                    ! Call the getGeodeticLatLon subroutine
-                    call getGeodeticLatLon(r_ecef, altitude, lat, lon)
-                    
-                    ! Define the expected values
-                    expected_altitude = 2641.7176408156010_dp
-                    expected_lat = 0.0_dp
-                    expected_lon = 0.78539816339744839_dp
-                    
-                    ! Check if the computed values match the expected values
-                    @assertRelativelyEqual(altitude, expected_altitude, tolerance=1.0e-7_dp)
-                    @assertEqual(lat, expected_lat)
-                    @assertEqual(lon, expected_lon)
-
-                     ! Initialize the input values
-                    r_ecef = (/6800.0_dp, 6720.0_dp, 0.0_dp/)
-                    
-                    ! Call the getGeodeticLatLon subroutine
-                    call getGeodeticLatLon(r_ecef, altitude, lat, lon)
-                    
-                    ! Define the expected values
-                    expected_altitude = 3182.1145827289511_dp
-                    expected_lat = 0.0_dp
-                    expected_lon = 0.77948107269142086_dp
-                    
-                    ! Check if the computed values match the expected values
-                    @assertRelativelyEqual(altitude, expected_altitude, tolerance=1.0e-7_dp)
-                    @assertEqual(lat, expected_lat)
-                    @assertEqual(lon, expected_lon)
-
-                     ! Initialize the input values
-                    r_ecef = (/6660.0_dp, 6700.0_dp, 6800.0_dp/)
-                    
-                    ! Call the getGeodeticLatLon subroutine
-                    call getGeodeticLatLon(r_ecef, altitude, lat, lon)
-                    
-                    ! Define the expected values
-                    expected_altitude = 5268.9997130137526_dp
-                    expected_lat = 0.62563861408879229_dp
-                    expected_lon = 0.78839216642732912_dp
-                    
-                    ! Check if the computed values match the expected values
-                    @assertRelativelyEqual(altitude, expected_altitude, tolerance=1.0e-7_dp)
-                    @assertEqual(lat, expected_lat)
-                    @assertEqual(lon, expected_lon)
-                    
-                  end subroutine test_getGeodeticLatLon
+        
+    contains
           
-                
-    end module test_slamastroconv
+   @test
+   subroutine test_rv2coe_long()
+
+        ! Tests the rv2coe_long subroutine
+        ! Reference Data : Astropy
+        ! Declare variables
+        real(dp), dimension(3) :: R, V
+        real(dp) :: P, A, Ecc, Incl, Omega, Argp, Nu, M, ArgLat, TrueLon, LonPer
+        integer :: otype
+        real(dp) :: expected_P, expected_A, expected_Ecc, expected_Incl, expected_Omega, expected_Argp
+        real(dp) :: expected_Nu, expected_M, expected_ArgLat, expected_TrueLon, expected_LonPer
+
+        ! Initialize the input vectors
+        R = (/-3485.799126707284, -5898.652976745232, 835.9701786284777/)
+        V = (/-1.3525457950562447, -0.2804534841971075, -7.4721873681232385/)
+
+        ! Call the rv2coe_long subroutine
+        call rv2coe_long(R, V, P, A, Ecc, Incl, Omega, Argp, Nu, M, ArgLat, TrueLon, LonPer, otype)
+
+        ! Define the expected values
+        expected_P = 6901.6785750976933_dp
+        expected_A = 6901.7162837732567_dp
+        expected_Ecc = 0.23374487008203386E-2_dp
+        expected_Incl = 1.7046673456441539_dp
+        expected_Omega = 1.0206263838483220_dp
+        expected_Argp = 1.4007653593235663_dp
+        expected_Nu = 1.6183154619738946_dp
+        expected_M = 1.6136454570550320_dp
+        expected_ArgLat = 999999.09999999998_dp
+        expected_TrueLon = 999999.09999999998_dp
+        expected_LonPer = 999999.09999999998_dp
+
+        ! Check if the computed values match the expected values
+        @assertRelativelyEqual(P, expected_P, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(A, expected_A, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(Ecc, expected_Ecc, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(Incl, expected_Incl, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(Omega, expected_Omega, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(Argp, expected_Argp, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(Nu, expected_Nu, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(M, expected_M, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(ArgLat, expected_ArgLat, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(TrueLon, expected_TrueLon, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(LonPer, expected_LonPer, tolerance=1.0e-7_dp)
+
+   end subroutine test_rv2coe_long
+
+   @test
+   subroutine test_rv2coe_short()
+
+        ! Tests the rv2coe_short subroutine
+        ! Reference Data : Astropy
+        ! Declare variables
+
+        type(state_t) :: car
+        type(kepler_t) :: kep
+        type(time_t) :: epoch, expected_epoch
+        integer :: otype
+        real(dp) :: expected_semipar, expected_sma, expected_ecc, expected_inc, expected_raan
+        real(dp) :: expected_aop, expected_tran, expected_man, expected_arglat, expected_truelon, expected_lonper
+        real(dp) :: semipar
+        ! Initialize the input state
+        car%R = (/-3485.799126707284, -5898.652976745232, 835.9701786284777/)
+        car%V = (/-1.3525457950562447, -0.2804534841971075, -7.4721873681232385/)
+
+        car%epoch%year = 2022
+        car%epoch%month = 10
+        car%epoch%day = 16
+        car%epoch%hour = 4
+        car%epoch%minute = 0
+        car%epoch%second = 47_dp
+
+        ! Call the rv2coe_short subroutine
+        call rv2coe_short(car, kep, otype)
+
+        ! Define the expected values
+        expected_semipar = 0
+        expected_sma = 6901.7162837732567_dp
+        expected_ecc = 0.23374487008203386E-2_dp
+        expected_inc = 1.7046673456441539_dp
+        expected_raan = 1.0206263838483220_dp
+        expected_aop = 1.4007653593235663_dp
+        expected_tran = 1.6183154619738946_dp
+        expected_man = 1.6136454570550320_dp
+        expected_arglat = 999999.09999999998_dp
+        expected_truelon = 999999.09999999998_dp
+        expected_lonper = 999999.09999999998_dp
+        expected_epoch%year = 2022
+        expected_epoch%month = 10
+        expected_epoch%day = 16
+        expected_epoch%hour = 4
+        expected_epoch%minute = 0
+        expected_epoch%second = 47_dp 
+
+        ! Check if the computed values match the expected values
+        @assertEqual(semipar, expected_semipar)
+        @assertRelativelyEqual(kep%sma, expected_sma, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(kep%ecc, expected_ecc, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(kep%inc, expected_inc, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(kep%raan, expected_raan, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(kep%aop, expected_aop, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(kep%tran, expected_tran, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(kep%man, expected_man, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(kep%arglat, expected_arglat, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(kep%truelon, expected_truelon, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(kep%lonper, expected_lonper, tolerance=1.0e-7_dp)
+
+   end subroutine test_rv2coe_short
+              
+   @test
+   subroutine test_coe2rv_long()
+
+        ! Tests the coe2rv_long subroutine
+        ! Reference Data : Astropy
+        ! Declare variables
+        
+        real(dp) :: P_in, Ecc, Incl, Omega_in, Argp_in, Nu_in, ArgLat, TrueLon, LonPer
+        real(dp), dimension(3) :: expected_R, expected_V
+        real(dp), dimension(3) :: R, V
+        
+        ! Initialize the input values
+        P_in = 6901.6785750976933_dp
+        Ecc = 0.23374487008203386E-2_dp
+        Incl = 1.7046673456441539_dp
+        Omega_in = 1.0206263838483220_dp
+        Argp_in = 1.4007653593235663_dp
+        Nu_in = 1.6183154619738946_dp
+        ArgLat = 999999.09999999998_dp
+        TrueLon = 999999.09999999998_dp
+        LonPer = 999999.09999999998_dp
+        
+        ! Call the coe2rv_long subroutine
+        call coe2rv_long(P_in, Ecc, Incl, Omega_in, Argp_in, Nu_in, ArgLat, TrueLon, LonPer, R, V)
+        
+        ! Define the expected values
+        expected_R = (/-3485.799126707284, -5898.652976745232, 835.9701786284777/)
+        expected_V = (/-1.3525457950562447, -0.2804534841971075, -7.4721873681232385/)
+        
+        ! Check if the computed values match the expected values
+        @assertRelativelyEqual(R, expected_R, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(V, expected_V, tolerance=1.0e-7_dp)
+    
+   end subroutine test_coe2rv_long
+
+   @test
+   subroutine test_getGeodeticLatLon()
+
+        ! Tests the getGeodeticLatLon subroutine
+        ! Reference Data : Astropy
+        ! Declare variables
+
+        real(dp), dimension(3) :: r_ecef, expected_r_ecef
+        real(dp) :: altitude, expected_altitude
+        real(dp) :: lat, expected_lat
+        real(dp) :: lon, expected_lon
+        
+        ! Initialize the input values
+        r_ecef = (/6378.0_dp, 6378.0_dp, 0.0_dp/)
+        
+        ! Call the getGeodeticLatLon subroutine
+        call getGeodeticLatLon(r_ecef, altitude, lat, lon)
+        
+        ! Define the expected values
+        expected_altitude = 2641.7176408156010_dp
+        expected_lat = 0.0_dp
+        expected_lon = 0.78539816339744839_dp
+        
+        ! Check if the computed values match the expected values
+        @assertRelativelyEqual(altitude, expected_altitude, tolerance=1.0e-7_dp)
+        @assertEqual(lat, expected_lat)
+        @assertEqual(lon, expected_lon)
+
+        ! Initialize the input values
+        r_ecef = (/6800.0_dp, 6720.0_dp, 0.0_dp/)
+        
+        ! Call the getGeodeticLatLon subroutine
+        call getGeodeticLatLon(r_ecef, altitude, lat, lon)
+        
+        ! Define the expected values
+        expected_altitude = 3182.1145827289511_dp
+        expected_lat = 0.0_dp
+        expected_lon = 0.77948107269142086_dp
+        
+        ! Check if the computed values match the expected values
+        @assertRelativelyEqual(altitude, expected_altitude, tolerance=1.0e-7_dp)
+        @assertEqual(lat, expected_lat)
+        @assertEqual(lon, expected_lon)
+
+        ! Initialize the input values
+        r_ecef = (/6660.0_dp, 6700.0_dp, 6800.0_dp/)
+        
+        ! Call the getGeodeticLatLon subroutine
+        call getGeodeticLatLon(r_ecef, altitude, lat, lon)
+        
+        ! Define the expected values
+        expected_altitude = 5268.9997130137526_dp
+        expected_lat = 0.62563861408879229_dp
+        expected_lon = 0.78839216642732912_dp
+        
+        ! Check if the computed values match the expected values
+        @assertRelativelyEqual(altitude, expected_altitude, tolerance=1.0e-7_dp)
+        @assertEqual(lat, expected_lat)
+        @assertEqual(lon, expected_lon)
+        
+   end subroutine test_getGeodeticLatLon
+
+end module test_slamastroconv

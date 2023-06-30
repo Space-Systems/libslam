@@ -1,20 +1,18 @@
-!>------------------------------------------------------------------------------------
+!==============================================================================
+!
+!> @anchor  test_slamtime
 !!
-!> @brief   Time Conversions Tests
+!> @brief   Program for testing most important functions and subroutines in slam_time
 !!
-!! @anchor  test_slamastroconv
+!> @author  Arkene Chouchene (AC)
 !!
-!> @author  Arkene Chouchene (VB)
-!> @author  Daniel Lück (CHK)
+!> @date    <ul>
+!!            <li>01.05.2023 (initial design)</li>
+!!          </ul>
 !!
-!> 
-!!            
-!!            
-!!         
-!!
-!> @copyright Institute of Space Systems / TU Braunschweig
-!!
-!!------------------------------------------------------------------------------------
+!! @details Program for testing slam_time functions and subroutines 
+!! Sources and Examples are mentioned above every test
+!------------------------------------------------------------------------
 module test_slamtime
     use funit
     use slam_time
@@ -29,8 +27,8 @@ module test_slamtime
 
     contains
 
-    @test
-    subroutine test_checkdate()
+   @test
+   subroutine test_checkdate()
         ! Tests that the checkdate subroutine correctly updates date and time values
         
         integer :: year, mon, day, hrs, mins
@@ -51,10 +49,10 @@ module test_slamtime
         @assertEqual(hrs, 12)
         @assertEqual(mins, 30)
         @assertRelativelyEqual(secs, 10.0_dp, tolerance=1.0e-10)
-    end subroutine test_checkdate
+   end subroutine test_checkdate
 
-     @test
-     subroutine test_date2string()
+   @test
+   subroutine test_date2string()
         ! Tests that the date2string function correctly converts a time_t object to a string
 
          type(time_t) :: date
@@ -70,10 +68,10 @@ module test_slamtime
         date_str = date2string(date)
 
         @assertEqual(date_str, '2021-05-03T12:30:45Z')
-    end subroutine test_date2string
+   end subroutine test_date2string
     
-    @test
-    subroutine test_date2longstring()
+   @test
+   subroutine test_date2longstring()
         ! Tests that the date2longstring function correctly converts a time_t object to a long string
 
         type(time_t) :: date
@@ -89,31 +87,30 @@ module test_slamtime
         date_str = date2longstring(date)
 
         @assertEqual(date_str, '2021-05-03T12:30:45.678900Z')
-    end subroutine test_date2longstring
 
-   
+   end subroutine test_date2longstring
     
-    @test
-    subroutine test_gd2jd_std()
+   @test
+   subroutine test_gd2jd_std()
         ! Tests that the gd2jd_std function correctly converts Gregorian dates to Julian dates
         ! Reference Data : Astropy
-    integer :: jyr = 2023
-    integer :: jmo = 5
-    integer :: jdy = 4
-    integer :: jhr = 14
-    integer :: jmi = 30
-    real(dp) :: sc = 0.0_dp
-    real(dp) :: expected_jd = 2460069.10417_dp
-    real(dp) :: computed_jd
+        integer :: jyr = 2023
+        integer :: jmo = 5
+        integer :: jdy = 4
+        integer :: jhr = 14
+        integer :: jmi = 30
+        real(dp) :: sc = 0.0_dp
+        real(dp) :: expected_jd = 2460069.10417_dp
+        real(dp) :: computed_jd
 
-    call gd2jd(jyr, jmo, jdy, jhr, jmi, sc, computed_jd)
+        call gd2jd(jyr, jmo, jdy, jhr, jmi, sc, computed_jd)
 
-    @assertRelativelyEqual(computed_jd, expected_jd, tolerance=1e-10)
-    end subroutine test_gd2jd_std
+        @assertRelativelyEqual(computed_jd, expected_jd, tolerance=1e-10)
+    
+   end subroutine test_gd2jd_std
    
-   
-    @test
-    subroutine test_gd2jd_dt()
+   @test
+   subroutine test_gd2jd_dt()
         ! Tests that the gd2jd_dt subroutine converts a time_t structure to Julian date and modified Julian date correctly
         ! Reference Data : Astropy
         real(dp) :: computed_jd, expected_jd
@@ -124,11 +121,10 @@ module test_slamtime
 
         @assertRelativelyEqual(computed_jd, expected_jd, tolerance=1e-10)
         
-    end subroutine test_gd2jd_dt
+   end subroutine test_gd2jd_dt
     
-
-    @test
-    subroutine test_gd2mjd_std()
+   @test
+   subroutine test_gd2mjd_std()
         ! Tests that the gd2mjd_std function correctly converts Gregorian dates to modified Julian dates
         ! Reference Data : Astropy
         integer :: year = 2023
@@ -144,10 +140,10 @@ module test_slamtime
         call gd2mjd(year, month, day, hour, minute, second, DJM0, computed_mjd)
 
         @assertEqual(computed_mjd, expected_mjd, tolerance=1e-10)
-    end subroutine test_gd2mjd_std
+   end subroutine test_gd2mjd_std
 
-    @test
-    subroutine test_jd2gd_std()
+   @test
+   subroutine test_jd2gd_std()
         ! Tests that the jd2gd_std function correctly converts Julian dates to Gregorian dates
         ! Reference Data : Astropy
         real(dp) :: jd = 2459347.3125_dp
@@ -172,208 +168,207 @@ module test_slamtime
         @assertEqual(computed_hour, expected_hour)
         @assertEqual(computed_minute, expected_minute)
         @assertEqual(computed_second, expected_second, tolerance=1e-10)
-    end subroutine test_jd2gd_std
 
-    @test
-subroutine test_jd2gd_dt()
-    ! Tests that the jd2gd_dt function correctly converts Julian dates to Gregorian dates
-    ! Reference Data : Astropy
-    type(time_t) :: date
-    real(dp) :: jd = 2459303.0_dp
-    real(dp) :: expected_mjd != jd - jd245
-    integer :: expected_year = 2021
-    integer :: expected_month = 3
-    integer :: expected_day = 29
-    integer :: expected_hour = 12
-    integer :: expected_minute = 0
-    real(dp) :: expected_second = 0.0_dp
+   end subroutine test_jd2gd_std
 
-    expected_mjd = jd - jd245
-    date%jd = jd
-    call jd2gd(date)
+   @test
+   subroutine test_jd2gd_dt()
+        ! Tests that the jd2gd_dt function correctly converts Julian dates to Gregorian dates
+        ! Reference Data : Astropy
+        type(time_t) :: date
+        real(dp) :: jd = 2459303.0_dp
+        real(dp) :: expected_mjd != jd - jd245
+        integer :: expected_year = 2021
+        integer :: expected_month = 3
+        integer :: expected_day = 29
+        integer :: expected_hour = 12
+        integer :: expected_minute = 0
+        real(dp) :: expected_second = 0.0_dp
 
-    @assertEqual(date%mjd, expected_mjd)
-    @assertEqual(date%year, expected_year)
-    @assertEqual(date%month, expected_month)
-    @assertEqual(date%day, expected_day)
-    @assertEqual(date%hour, expected_hour)
-    @assertEqual(date%minute, expected_minute)
-    @assertEqual(date%second, expected_second, tolerance=1e-10)
-end subroutine test_jd2gd_dt
+        expected_mjd = jd - jd245
+        date%jd = jd
+        call jd2gd(date)
 
+        @assertEqual(date%mjd, expected_mjd)
+        @assertEqual(date%year, expected_year)
+        @assertEqual(date%month, expected_month)
+        @assertEqual(date%day, expected_day)
+        @assertEqual(date%hour, expected_hour)
+        @assertEqual(date%minute, expected_minute)
+        @assertEqual(date%second, expected_second, tolerance=1e-10)
+   end subroutine test_jd2gd_dt
 
-@test
-subroutine test_jd2gd_string()
-    ! Test if jd2gd_string converts Julian dates to Gregorian dates correctly
-    ! Reference Data : Astropy
-    character(len=LEN_TIME_STRING_SHORT) :: expected_out = '2022-07-26T07:59:59Z'
-    character(len=LEN_TIME_STRING_SHORT) :: actual_out
-    character(len=LEN_TIME_STRING_SHORT) :: input_jd = '2459786.83333'
+   @test
+   subroutine test_jd2gd_string()
+        ! Test if jd2gd_string converts Julian dates to Gregorian dates correctly
+        ! Reference Data : Astropy
+        character(len=LEN_TIME_STRING_SHORT) :: expected_out = '2022-07-26T07:59:59Z'
+        character(len=LEN_TIME_STRING_SHORT) :: actual_out
+        character(len=LEN_TIME_STRING_SHORT) :: input_jd = '2459786.83333'
 
-    call jd2gd(input_jd, actual_out)
+        call jd2gd(input_jd, actual_out)
 
-    @assertEqual(actual_out, expected_out, 'The conversion from JD to GD is incorrect')
-  end subroutine test_jd2gd_string
+        @assertEqual(actual_out, expected_out, 'The conversion from JD to GD is incorrect')
 
-  @test
-subroutine test_mjd2gd_dt()
-    ! Tests the conversion of Modified Julian Date (MJD) to Gregorian date/time
-    ! using the mjd2gd_dt subroutine
+   end subroutine test_jd2gd_string
+
+   @test
+   subroutine test_mjd2gd_dt()
+        ! Tests the conversion of Modified Julian Date (MJD) to Gregorian date/time
+        ! using the mjd2gd_dt subroutine
+        
+        type(time_t) :: date
+        integer :: expected_year, expected_month, expected_day, expected_hour, expected_minute
+        real(dp) :: expected_frac, expected_jd, expected_second
+        
+        ! test #1: January 23, 2023 12:00:00 UT
+        date%mjd = 59602.0_dp
+        call mjd2gd(date)
+        expected_year = 2022
+        expected_month = 1
+        expected_day = 23
+        expected_hour = 0
+        expected_minute = 0
+        expected_second = 0.0_dp
+        expected_jd = 2459602.5_dp
+        @assertEqual(date%year, expected_year)
+        @assertEqual(date%month, expected_month)
+        @assertEqual(date%day, expected_day)
+        @assertEqual(date%hour, expected_hour)
+        @assertEqual(date%minute, expected_minute)
+        @assertEqual(date%second, expected_second)
+        @assertEqual(date%jd, expected_jd)
+        
+        ! test #2: November 12, 2022 23:59:59 UT
+        date%mjd = 59554.0_dp
+        call mjd2gd(date)
+        expected_year = 2021
+        expected_month = 12
+        expected_day = 6
+        expected_hour = 0
+        expected_minute = 0
+        expected_second = 0
+        expected_jd = 2459554.5_dp
+        expected_frac = 0.999988425925926_dp
+        @assertEqual(date%year, expected_year)
+        @assertEqual(date%month, expected_month)
+        @assertEqual(date%day, expected_day)
+        @assertEqual(date%hour, expected_hour)
+        @assertEqual(date%minute, expected_minute)
+        @assertEqual(date%second, expected_second)
+        @assertEqual(date%jd, expected_jd)
     
-    type(time_t) :: date
-    integer :: expected_year, expected_month, expected_day, expected_hour, expected_minute
-    real(dp) :: expected_frac, expected_jd, expected_second
+   end subroutine test_mjd2gd_dt
+
+   @test
+   subroutine test_jd2mjd()
+        ! Tests the conversion of Julian Day to Modified Julian Day
+        ! Reference Data : Astropy
+        type(time_t) :: date
+        
+        date%jd = 2458856.5_dp
+
+        
+        call jd2mjd(date)
+        @assertEqual(date%mjd, 58856.0_dp)
+
+   end subroutine test_jd2mjd
+   
+   @test
+   subroutine test_mjd2jd()
+        ! Tests the conversion from Julian Date to Modified Julian Date
+
+        type(time_t) :: date
+        date%mjd = 58856.0_dp
+        call mjd2jd(date)
+
+        @assertEqual(date%jd, 2458856.5_dp)
+
+   end subroutine test_mjd2jd
+
+   @test
+   subroutine test_yyddd2date()
+        ! Tests that yyddd2date returns the correct date given a YYDDD input
+        ! Reference Data : Astropy
+        type(time_t) :: date
+        real(dp) :: yyddd = 21123.456789_dp ! May 3, 2021 10:58:40.123456 PM
     
-    ! test #1: January 23, 2023 12:00:00 UT
-    date%mjd = 59602.0_dp
-    call mjd2gd(date)
-    expected_year = 2022
-    expected_month = 1
-    expected_day = 23
-    expected_hour = 0
-    expected_minute = 0
-    expected_second = 0.0_dp
-    expected_jd = 2459602.5_dp
-    @assertEqual(date%year, expected_year)
-    @assertEqual(date%month, expected_month)
-    @assertEqual(date%day, expected_day)
-    @assertEqual(date%hour, expected_hour)
-    @assertEqual(date%minute, expected_minute)
-    @assertEqual(date%second, expected_second)
-    @assertEqual(date%jd, expected_jd)
+        date = yyddd2date(yyddd)
     
-    ! test #2: November 12, 2022 23:59:59 UT
-    date%mjd = 59554.0_dp
-    call mjd2gd(date)
-    expected_year = 2021
-    expected_month = 12
-    expected_day = 6
-    expected_hour = 0
-    expected_minute = 0
-    expected_second = 0
-    expected_jd = 2459554.5_dp
-    expected_frac = 0.999988425925926_dp
-    @assertEqual(date%year, expected_year)
-    @assertEqual(date%month, expected_month)
-    @assertEqual(date%day, expected_day)
-    @assertEqual(date%hour, expected_hour)
-    @assertEqual(date%minute, expected_minute)
-    @assertEqual(date%second, expected_second)
-    @assertEqual(date%jd, expected_jd)
-    
-    
-end subroutine test_mjd2gd_dt
+        @assertEqual(date%year, 2021)
+        @assertEqual(date%month, 5)
+        @assertEqual(date%day, 3)
+        @assertEqual(date%hour, 10)
+        @assertEqual(date%minute, 57)
+        @assertRelativelyEqual(date%second, 46.569600300863542_dp, tolerance=1.0e-10)
+   end subroutine test_yyddd2date
 
-@test
-subroutine test_jd2mjd()
-    ! Tests the conversion of Julian Day to Modified Julian Day
-    ! Reference Data : Astropy
-    type(time_t) :: date
-    
-    date%jd = 2458856.5_dp
-
-    
-    call jd2mjd(date)
-    @assertEqual(date%mjd, 58856.0_dp)
-
-
- end subroutine test_jd2mjd
-
- @test
- subroutine test_mjd2jd()
-      ! Tests the conversion from Julian Date to Modified Julian Date
-
-     type(time_t) :: date
-     date%mjd = 58856.0_dp
-     call mjd2jd(date)
-
-     @assertEqual(date%jd, 2458856.5_dp)
- end subroutine test_mjd2jd
-
- 
-    @test
-    subroutine test_yyddd2date()
-      ! Tests that yyddd2date returns the correct date given a YYDDD input
-      ! Reference Data : Astropy
-      type(time_t) :: date
-      real(dp) :: yyddd = 21123.456789_dp ! May 3, 2021 10:58:40.123456 PM
-  
-      date = yyddd2date(yyddd)
-  
-      @assertEqual(date%year, 2021)
-      @assertEqual(date%month, 5)
-      @assertEqual(date%day, 3)
-      @assertEqual(date%hour, 10)
-      @assertEqual(date%minute, 57)
-      @assertRelativelyEqual(date%second, 46.569600300863542_dp, tolerance=1.0e-10)
-    end subroutine test_yyddd2date
-
-    @test 
-    subroutine test_mjd2yyddd()
+   @test 
+   subroutine test_mjd2yyddd()
         ! Tests that mjd2yyddd returns the correct date give a Modified Julian Date input 
         ! Reference Data : Astropy
-            integer :: year, month, day
-            real(dp) :: time_mjd, DB0
-            integer :: expected_yyddd, actual_yyddd
+        integer :: year, month, day
+        real(dp) :: time_mjd, DB0
+        integer :: expected_yyddd, actual_yyddd
+      
+        ! Test 1: Check yyddd on 1 Jan 2000
+        year = 2000
+        month = 1
+        day = 1
+        DB0 = 2400000.5_dp
+        call gd2mjd(year, month, day, 0, 0, 0.0_dp,DB0, time_mjd)
+        expected_yyddd = 00001
+        actual_yyddd = mjd2yyddd(time_mjd)
+        @assertEqual(expected_yyddd, actual_yyddd)
+      
+        ! Test 2: Check yyddd on 31 Dec 2020
+        year = 2020
+        month = 12
+        day = 31
+        call gd2mjd(year, month, day, 23, 59, 59.0_dp,DB0, time_mjd)
+        expected_yyddd = 20366
+        actual_yyddd = mjd2yyddd(time_mjd)
+        @assertEqual(actual_yyddd, expected_yyddd)
           
-            ! Test 1: Check yyddd on 1 Jan 2000
-            year = 2000
-            month = 1
-            day = 1
-            DB0 = 2400000.5_dp
-            call gd2mjd(year, month, day, 0, 0, 0.0_dp,DB0, time_mjd)
-            expected_yyddd = 00001
-            actual_yyddd = mjd2yyddd(time_mjd)
-            @assertEqual(expected_yyddd, actual_yyddd)
-          
-            ! Test 2: Check yyddd on 31 Dec 2020
-            year = 2020
-            month = 12
-            day = 31
-            call gd2mjd(year, month, day, 23, 59, 59.0_dp,DB0, time_mjd)
-            expected_yyddd = 20366
-            actual_yyddd = mjd2yyddd(time_mjd)
-            @assertEqual(actual_yyddd, expected_yyddd)
-          
-          end subroutine test_mjd2yyddd
+   end subroutine test_mjd2yyddd
 
-          @test 
-          subroutine test_delta_AT()
+   @test 
+   subroutine test_delta_AT()
             
-            integer :: IY, IM, ID, J
-            real*8 :: FD, DELTAT, expected_delT
-            
-            ! Test case 1: 2016-12-31T23:59:60.5 UTC
-            ! Reference Data : Astropy
-            IY = 2015
-            IM = 12
-            ID = 31
-            FD = 86399.5 / 86400.0
-            expected_delT = 36.0
-            
-            call delta_AT(IY, IM, ID, FD, DELTAT, J)
-            @assertRelativelyEqual(DELTAT, expected_delT, tolerance=1.0e-10)
-            
-            ! Test case 2: 2017-01-01T00:00:00.0 UTC
-            IY = 2017
-            IM = 1
-            ID = 1
-            FD = 0.0
-            expected_delT = 36.0
-            
-            call delta_AT(IY, IM, ID, FD, DELTAT, J)
-            @assertRelativelyEqual(DELTAT, expected_delT, tolerance=1.0e-10)
-            
-            ! Test case 3: 2022-12-31T23:59:59.5 UTC
-            IY = 2022
-            IM = 12
-            ID = 31
-            FD = 86399.5 / 86400.0
-            expected_delT = 36.0
-            
-            call delta_AT(IY, IM, ID, FD, DELTAT, J)
-            @assertRelativelyEqual(DELTAT, expected_delT, tolerance=1.0e-10)
+        integer :: IY, IM, ID, J
+        real*8 :: FD, DELTAT, expected_delT
+        
+        ! Test case 1: 2016-12-31T23:59:60.5 UTC
+        ! Reference Data : Astropy
+        IY = 2015
+        IM = 12
+        ID = 31
+        FD = 86399.5 / 86400.0
+        expected_delT = 36.0
+        
+        call delta_AT(IY, IM, ID, FD, DELTAT, J)
+        @assertRelativelyEqual(DELTAT, expected_delT, tolerance=1.0e-10)
+        
+        ! Test case 2: 2017-01-01T00:00:00.0 UTC
+        IY = 2017
+        IM = 1
+        ID = 1
+        FD = 0.0
+        expected_delT = 36.0
+        
+        call delta_AT(IY, IM, ID, FD, DELTAT, J)
+        @assertRelativelyEqual(DELTAT, expected_delT, tolerance=1.0e-10)
+        
+        ! Test case 3: 2022-12-31T23:59:59.5 UTC
+        IY = 2022
+        IM = 12
+        ID = 31
+        FD = 86399.5 / 86400.0
+        expected_delT = 36.0
+        
+        call delta_AT(IY, IM, ID, FD, DELTAT, J)
+        @assertRelativelyEqual(DELTAT, expected_delT, tolerance=1.0e-10)
           
-        end subroutine test_delta_AT
+   end subroutine test_delta_AT
           
 end module test_slamtime
