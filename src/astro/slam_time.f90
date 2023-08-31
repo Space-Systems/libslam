@@ -578,13 +578,11 @@ module slam_time
     second_fraction = nint((date%second-int(date%second))*1E6)*1E-6
     if (second_fraction  > 0.999999d0) then
         ! Round to
-        second_fraction = 0.0d0
-        write (*,*) (second_fraction)
-        write (*,*) (date%second)          
-          ! Create an intermediate adjusted date with seconds increased by 1
-          write(date2longstring,'(i4,2("-",i2.2),"T",2(i2.2,":"),(i2.2,f0.6),"Z")')    &
-          date%year, date%month, date%day, date%hour,                          &
-          date%minute, int(date%second) + 1 , second_fraction 
+        second_fraction = 0.0d0          
+        ! Create an intermediate adjusted date with seconds increased by 1
+        write(date2longstring,'(i4,2("-",i2.2),"T",2(i2.2,":"),(i2.2,f0.6),"Z")')    &
+              date%year, date%month, date%day, date%hour,                          &
+              date%minute, int(date%second) + 1 , second_fraction 
     else 
         write(date2longstring,'(i4,2("-",i2.2),"T",2(i2.2,":"),(i2.2,f0.6),"Z")')    &
                 date%year, date%month, date%day, date%hour,                     &
