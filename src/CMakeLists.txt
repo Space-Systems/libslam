@@ -41,7 +41,8 @@ SET_TARGET_PROPERTIES (
 # Install the libraries into the lib directory
 install(TARGETS slam-Fortran
         LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib)
+        ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION lib)
 
 ### Install Fortran Mod files
 # Install the Fortran module files into the include directory
