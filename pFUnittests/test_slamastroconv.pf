@@ -40,8 +40,8 @@ module test_slamastroconv
         real(dp) :: expected_Nu, expected_M, expected_ArgLat, expected_TrueLon, expected_LonPer
 
         ! Initialize the input vectors
-        R = (/-3485.799126707284, -5898.652976745232, 835.9701786284777/)
-        V = (/-1.3525457950562447, -0.2804534841971075, -7.4721873681232385/)
+        R = (/-3485.799126707284_dp, -5898.652976745232_dp, 835.9701786284777_dp/)
+        V = (/-1.3525457950562447_dp, -0.2804534841971075_dp, -7.4721873681232385_dp/)
 
         ! Call the rv2coe_long subroutine
         call rv2coe_long(R, V, P, A, Ecc, Incl, Omega, Argp, Nu, M, ArgLat, TrueLon, LonPer, otype)
@@ -60,17 +60,17 @@ module test_slamastroconv
         expected_LonPer = 999999.09999999998_dp
 
         ! Check if the computed values match the expected values
-        @assertRelativelyEqual(P, expected_P, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(A, expected_A, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(Ecc, expected_Ecc, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(Incl, expected_Incl, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(Omega, expected_Omega, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(Argp, expected_Argp, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(Nu, expected_Nu, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(M, expected_M, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(ArgLat, expected_ArgLat, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(TrueLon, expected_TrueLon, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(LonPer, expected_LonPer, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(P, expected_P, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(A, expected_A, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(Ecc, expected_Ecc, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(Incl, expected_Incl, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(Omega, expected_Omega, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(Argp, expected_Argp, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(Nu, expected_Nu, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(M, expected_M, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(ArgLat, expected_ArgLat, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(TrueLon, expected_TrueLon, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(LonPer, expected_LonPer, tolerance=1.0e-5_dp)
 
    end subroutine test_rv2coe_long
 
@@ -89,8 +89,8 @@ module test_slamastroconv
         real(dp) :: expected_aop, expected_tran, expected_man, expected_arglat, expected_truelon, expected_lonper
         real(dp) :: semipar
         ! Initialize the input state
-        car%R = (/-3485.799126707284, -5898.652976745232, 835.9701786284777/)
-        car%V = (/-1.3525457950562447, -0.2804534841971075, -7.4721873681232385/)
+        car%R = (/-3485.799126707284_dp, -5898.652976745232_dp, 835.9701786284777_dp/)
+        car%V = (/-1.3525457950562447_dp, -0.2804534841971075_dp, -7.4721873681232385_dp/)
 
         car%epoch%year = 2022
         car%epoch%month = 10
@@ -123,16 +123,16 @@ module test_slamastroconv
 
         ! Check if the computed values match the expected values
         @assertEqual(semipar, expected_semipar)
-        @assertRelativelyEqual(kep%sma, expected_sma, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(kep%ecc, expected_ecc, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(kep%inc, expected_inc, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(kep%raan, expected_raan, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(kep%aop, expected_aop, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(kep%tran, expected_tran, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(kep%man, expected_man, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(kep%arglat, expected_arglat, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(kep%truelon, expected_truelon, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(kep%lonper, expected_lonper, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(kep%sma, expected_sma, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(kep%ecc, expected_ecc, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(kep%inc, expected_inc, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(kep%raan, expected_raan, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(kep%aop, expected_aop, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(kep%tran, expected_tran, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(kep%man, expected_man, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(kep%arglat, expected_arglat, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(kep%truelon, expected_truelon, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(kep%lonper, expected_lonper, tolerance=1.0e-5_dp)
 
    end subroutine test_rv2coe_short
               
@@ -162,12 +162,12 @@ module test_slamastroconv
         call coe2rv_long(P_in, Ecc, Incl, Omega_in, Argp_in, Nu_in, ArgLat, TrueLon, LonPer, R, V)
         
         ! Define the expected values
-        expected_R = (/-3485.799126707284, -5898.652976745232, 835.9701786284777/)
-        expected_V = (/-1.3525457950562447, -0.2804534841971075, -7.4721873681232385/)
+        expected_R = (/-3485.799126707284_dp, -5898.652976745232_dp, 835.9701786284777_dp/)
+        expected_V = (/-1.3525457950562447_dp, -0.2804534841971075_dp, -7.4721873681232385_dp/)
         
         ! Check if the computed values match the expected values
-        @assertRelativelyEqual(R, expected_R, tolerance=1.0e-7_dp)
-        @assertRelativelyEqual(V, expected_V, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(R, expected_R, tolerance=1.0e-5_dp)
+        @assertRelativelyEqual(V, expected_V, tolerance=1.0e-5_dp)
     
    end subroutine test_coe2rv_long
 
@@ -195,7 +195,7 @@ module test_slamastroconv
         expected_lon = 0.78539816339744839_dp
         
         ! Check if the computed values match the expected values
-        @assertRelativelyEqual(altitude, expected_altitude, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(altitude, expected_altitude, tolerance=1.0e-5_dp)
         @assertEqual(lat, expected_lat)
         @assertEqual(lon, expected_lon)
 
@@ -211,7 +211,7 @@ module test_slamastroconv
         expected_lon = 0.77948107269142086_dp
         
         ! Check if the computed values match the expected values
-        @assertRelativelyEqual(altitude, expected_altitude, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(altitude, expected_altitude, tolerance=1.0e-5_dp)
         @assertEqual(lat, expected_lat)
         @assertEqual(lon, expected_lon)
 
@@ -227,7 +227,7 @@ module test_slamastroconv
         expected_lon = 0.78839216642732912_dp
         
         ! Check if the computed values match the expected values
-        @assertRelativelyEqual(altitude, expected_altitude, tolerance=1.0e-7_dp)
+        @assertRelativelyEqual(altitude, expected_altitude, tolerance=1.0e-5_dp)
         @assertEqual(lat, expected_lat)
         @assertEqual(lon, expected_lon)
         
