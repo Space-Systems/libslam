@@ -70,7 +70,7 @@ module test_slammath
         expected_result = sqrt(14.0_dp)
 
         ! Check if the computed result matches the expected result
-        @assertRelativelyEqual(result, expected_result, tolerance=1.0e-10_dp)
+        @assertRelativelyEqual(expected_result, result, tolerance=1.0e-10_dp)
    end subroutine test_magFunction
       
 end module test_slammath

@@ -51,7 +51,7 @@ module test_slamlinAlgebra
                             -0.1, -0.14285714285714285, 0.27142857142857146/), (/3, 3/))
         
         ! Check if the compute inverse matrix matches the expected inverse matrix
-        @assertEqual(A_inv, expected, tolerance = 0.00001)
+        @assertEqual(expected, A_inv, tolerance = 0.00001)
       
    end subroutine test_invert_matrix
 

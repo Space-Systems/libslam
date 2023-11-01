@@ -60,7 +60,7 @@ module test_slamreduction
         tolerance = 1.0d-6
         ! check if output matches expected
         do i = 1, 3
-        @assertRelativelyEqual(vec_out(i), expected(i), tolerance)
+        @assertRelativelyEqual(expected(i), vec_out(i), tolerance)
         end do
 
         ! Test case 2 : SSO
@@ -78,7 +78,7 @@ module test_slamreduction
         tolerance = 1.0d-6
         ! check if output matches expected
         do i = 1, 3
-        @assertRelativelyEqual(vec_out(i), expected(i), tolerance)
+        @assertRelativelyEqual(expected(i), vec_out(i), tolerance)
 
         end do
 
@@ -97,7 +97,7 @@ module test_slamreduction
         tolerance = 1.0d-6
         ! check if output matches expected
         do i = 1, 3
-        @assertRelativelyEqual(vec_out(i), expected(i), tolerance)
+        @assertRelativelyEqual(expected(i), vec_out(i), tolerance)
         end do
 
         ! Test case 4 : GTO2
@@ -115,7 +115,7 @@ module test_slamreduction
         tolerance = 1.0d-6
         ! check if output matches expected
         do i = 1, 3
-        @assertRelativelyEqual(vec_out(i), expected(i), tolerance)
+        @assertRelativelyEqual(expected(i), vec_out(i), tolerance)
 
         end do
 
@@ -135,7 +135,7 @@ module test_slamreduction
         tolerance = 1.0d-6
         ! check if output matches expected
         do i = 1, 3
-        @assertRelativelyEqual(vec_out(i), expected(i), tolerance)
+        @assertRelativelyEqual(expected(i), vec_out(i), tolerance)
 
         end do
 
@@ -276,7 +276,7 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! check if output matches expected
-        @assertRelativelyEqual(vec_sez, expected, tolerance)
+        @assertRelativelyEqual(expected, vec_sez, tolerance)
 
         ! Test case 2 : SSO
 
@@ -294,7 +294,7 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! check if output matches expected
-        @assertRelativelyEqual(vec_sez, expected, tolerance)
+        @assertRelativelyEqual(expected, vec_sez, tolerance)
 
    end subroutine test_itrf2sez
 
@@ -330,7 +330,7 @@ module test_slamreduction
 
         ! check if output matches expected
 
-        @assertRelativelyEqual(vec_itrf, expected, tolerance)
+        @assertRelativelyEqual(expected, vec_itrf, tolerance)
 
         ! Test case 2 
         vec_sez = (/-773.8654, -581.4980, 328.8145/)
@@ -348,7 +348,7 @@ module test_slamreduction
 
         ! check if output matches expected
 
-        @assertRelativelyEqual(vec_itrf, expected, tolerance)
+        @assertRelativelyEqual(expected, vec_itrf, tolerance)
 
    end subroutine test_sez2itrf
 
@@ -478,8 +478,8 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! Check if outputs match expected values
-        @assertRelativelyEqual(r_inr, expected_r_inr, tolerance)
-        @assertRelativelyEqual(v_inr, expected_v_inr, tolerance)
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
+        @assertRelativelyEqual(expected_v_inr, v_inr, tolerance)
 
         ! Test case 2 : SSO
         r_ef = (/1276.3548924297563, -6983.018152962259, -106.49682863132377/) 
@@ -497,8 +497,8 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! Check if outputs match expected values
-        @assertRelativelyEqual(r_inr, expected_r_inr, tolerance)
-        @assertRelativelyEqual(v_inr, expected_v_inr, tolerance)
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
+        @assertRelativelyEqual(expected_v_inr, v_inr, tolerance)
 
         ! Test case 3 : GTO1
         r_ef =  (/31986.08889084533, 3886.249797563777, -17606.478382491812/)    
@@ -516,8 +516,8 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! Check if outputs match expected values
-        @assertRelativelyEqual(r_inr, expected_r_inr, tolerance)
-        @assertRelativelyEqual(v_inr, expected_v_inr, tolerance)
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
+        @assertRelativelyEqual(expected_v_inr, v_inr, tolerance)
 
         ! Test case 4 : GTO2
         r_ef =  (/-2075.594626467358, -11489.252286113591, 2263.027976512451/)    
@@ -535,8 +535,8 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! Check if outputs match expected values
-        @assertRelativelyEqual(r_inr, expected_r_inr, tolerance)
-        @assertRelativelyEqual(v_inr, expected_v_inr, tolerance)
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
+        @assertRelativelyEqual(expected_v_inr, v_inr, tolerance)
 
         ! Test case 5 : GEO
 
@@ -555,8 +555,8 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! Check if outputs match expected values
-        @assertRelativelyEqual(r_inr, expected_r_inr, tolerance)
-        @assertRelativelyEqual(v_inr, expected_v_inr, tolerance)
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
+        @assertRelativelyEqual(expected_v_inr, v_inr, tolerance)
 
    end subroutine test_earthFixed2inertial_rv
 
@@ -593,7 +593,7 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! check if output matches expected
-        @assertRelativelyEqual(r_inr, expected_r_inr, tolerance)
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
 
         ! Test case 2 : SSO
         r_ef = (/1276.3548924297563, -6983.018152962259, -106.49682863132377/) 
@@ -609,7 +609,7 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! check if output matches expected
-        @assertRelativelyEqual(r_inr, expected_r_inr, tolerance)
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
 
         ! Test case 3 : GTO1
         r_ef = (/31986.08889084533, 3886.249797563777, -17606.478382491812/) 
@@ -625,7 +625,7 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! check if output matches expected
-        @assertRelativelyEqual(r_inr, expected_r_inr, tolerance)
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
 
         ! Test case 4 : GTO2
         r_ef = (/-2075.594626467358, -11489.252286113591, 2263.027976512451/)
@@ -641,7 +641,7 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! check if output matches expected
-        @assertRelativelyEqual(r_inr, expected_r_inr, tolerance)
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
 
         ! Test case 5 : GEO
         r_ef = (/-42044.21889179173, -3193.6719204189853, 105.63094940415252/)
@@ -657,7 +657,7 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! check if output matches expected
-        @assertRelativelyEqual(r_inr, expected_r_inr, tolerance)
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
 
    end subroutine test_earthFixed2inertial_r
 
@@ -803,8 +803,8 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! check if output matches expected
-        @assertRelativelyEqual(r_ef, expected_r_ef, tolerance)
-        @assertRelativelyEqual(v_ef, expected_v_ef, tolerance)
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
+        @assertRelativelyEqual(expected_v_ef, v_ef, tolerance)
 
         ! Test case 2 : SSO
         r_inr = (/7072.2648613669126, 609.22370162380560, -121.98699255537927/)
@@ -822,8 +822,8 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! check if output matches expected
-        @assertRelativelyEqual(r_ef, expected_r_ef, tolerance)
-        @assertRelativelyEqual(v_ef, expected_v_ef, tolerance)
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
+        @assertRelativelyEqual(expected_v_ef, v_ef, tolerance)
 
 
         ! Test case 3 : GTO1
@@ -842,8 +842,8 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! check if output matches expected
-        @assertRelativelyEqual(r_ef, expected_r_ef, tolerance)
-        @assertRelativelyEqual(v_ef, expected_v_ef, tolerance)
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
+        @assertRelativelyEqual(expected_v_ef, v_ef, tolerance)
 
         ! Test case 4 : GTO2
         r_inr = (/10988.388059643426, 3958.7024881264651, 2239.7103486946576/)
@@ -861,8 +861,8 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! check if output matches expected
-        @assertRelativelyEqual(r_ef, expected_r_ef, tolerance)
-        @assertRelativelyEqual(v_ef, expected_v_ef, tolerance)
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
+        @assertRelativelyEqual(expected_v_ef, v_ef, tolerance)
 
         ! Test case 5 : GEO
         r_inr = (/42151.662630156716, 1078.8766087037018, 19.774161242768663/)
@@ -880,8 +880,8 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! check if output matches expected
-        @assertRelativelyEqual(r_ef, expected_r_ef, tolerance)
-        @assertRelativelyEqual(v_ef, expected_v_ef, tolerance)
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
+        @assertRelativelyEqual(expected_v_ef, v_ef, tolerance)
 
    end subroutine test_inertial2earthFixed_rv
 
@@ -916,7 +916,7 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! check if output matches expected
-        @assertRelativelyEqual(r_ef, expected_r_ef, tolerance)
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
 
         ! Test case 2 : SSO
         r_inr = (/-6195.3089449426943, -3182.2858414848092, 1376.2879473774449/)
@@ -932,7 +932,7 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! check if output matches expected
-        @assertRelativelyEqual(r_ef, expected_r_ef, tolerance)
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
 
         ! Test case 3 : GTO1
         r_inr = (/1325.9633384465537, -20603.560170780896, -30363.400598296554/)
@@ -948,7 +948,7 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! check if output matches expected
-        @assertRelativelyEqual(r_ef, expected_r_ef, tolerance)
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
 
         ! Test case 4 : GTO2
         r_inr = (/-9850.7931103627325, -2444.8938941380229, 6198.1181763580144/)
@@ -964,7 +964,7 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! check if output matches expected
-        @assertRelativelyEqual(r_ef, expected_r_ef, tolerance)
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
 
         ! Test case 5 : GEO
         r_inr = (/42151.662630156716, 1078.8766087037018, 19.774161242768663/)
@@ -980,7 +980,7 @@ module test_slamreduction
         tolerance = 1e-6_dp
 
         ! check if output matches expected
-        @assertRelativelyEqual(r_ef, expected_r_ef, tolerance)
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
 
    end subroutine test_inertial2earthFixed_r
 end module test_slamreduction 

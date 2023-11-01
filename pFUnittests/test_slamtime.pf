@@ -43,12 +43,12 @@ module test_slamtime
 
         call checkdate(year, mon, day, hrs, mins, secs)
 
-        @assertEqual(year, 2021)
-        @assertEqual(mon, 5)
-        @assertEqual(day, 3)
-        @assertEqual(hrs, 12)
-        @assertEqual(mins, 30)
-        @assertRelativelyEqual(secs, 10.0_dp, tolerance=1.0e-10)
+        @assertEqual(2021, year)
+        @assertEqual(5, mon)
+        @assertEqual(3, day)
+        @assertEqual(12, hrs)
+        @assertEqual(30, mins)
+        @assertRelativelyEqual(10.0_dp, secs, tolerance=1.0e-10)
    end subroutine test_checkdate
 
    @test
@@ -67,7 +67,7 @@ module test_slamtime
 
         date_str = date2string(date)
 
-        @assertEqual(date_str, '2021-05-03T12:30:05Z')
+        @assertEqual('2021-05-03T12:30:05Z', date_str)
    end subroutine test_date2string
     
    @test
@@ -86,7 +86,7 @@ module test_slamtime
 
         date_str = date2longstring(date)
 
-        @assertEqual(date_str, '2021-05-03T12:09:05.445566Z')
+        @assertEqual('2021-05-03T12:09:05.445566Z', date_str)
 
    end subroutine test_date2longstring
     
@@ -105,7 +105,7 @@ module test_slamtime
 
         call gd2jd(jyr, jmo, jdy, jhr, jmi, sc, computed_jd)
 
-        @assertRelativelyEqual(computed_jd, expected_jd, tolerance=1e-10)
+        @assertRelativelyEqual(expected_jd, computed_jd, tolerance=1e-10)
     
    end subroutine test_gd2jd_std
    
@@ -119,7 +119,7 @@ module test_slamtime
 
         call gd2jd(2023, 5, 4, 13, 30, 0.0_dp, computed_jd)
 
-        @assertRelativelyEqual(computed_jd, expected_jd, tolerance=1e-10)
+        @assertRelativelyEqual(expected_jd, computed_jd, tolerance=1e-10)
         
    end subroutine test_gd2jd_dt
     
@@ -139,7 +139,7 @@ module test_slamtime
 
         call gd2mjd(year, month, day, hour, minute, second, DJM0, computed_mjd)
 
-        @assertEqual(computed_mjd, expected_mjd, tolerance=1e-10)
+        @assertEqual(expected_mjd, computed_mjd, tolerance=1e-10)
    end subroutine test_gd2mjd_std
 
    @test
@@ -162,12 +162,12 @@ module test_slamtime
     
         call jd2gd(jd, computed_year, computed_month, computed_day, computed_hour, computed_minute, computed_second)
     
-        @assertEqual(computed_year, expected_year)
-        @assertEqual(computed_month, expected_month)
-        @assertEqual(computed_day, expected_day)
-        @assertEqual(computed_hour, expected_hour)
-        @assertEqual(computed_minute, expected_minute)
-        @assertEqual(computed_second, expected_second, tolerance=1e-10)
+        @assertEqual(expected_year, computed_year)
+        @assertEqual(expected_month, computed_month)
+        @assertEqual(expected_day, computed_day)
+        @assertEqual(expected_hour, computed_hour)
+        @assertEqual(expected_minute, computed_minute)
+        @assertEqual(expected_second, computed_second)
 
    end subroutine test_jd2gd_std
 
@@ -189,13 +189,13 @@ module test_slamtime
         date%jd = jd
         call jd2gd(date)
 
-        @assertEqual(date%mjd, expected_mjd)
-        @assertEqual(date%year, expected_year)
-        @assertEqual(date%month, expected_month)
-        @assertEqual(date%day, expected_day)
-        @assertEqual(date%hour, expected_hour)
-        @assertEqual(date%minute, expected_minute)
-        @assertEqual(date%second, expected_second, tolerance=1e-10)
+        @assertEqual(expected_mjd, date%mjd)
+        @assertEqual(expected_year, date%year)
+        @assertEqual(expected_month, date%month)
+        @assertEqual(expected_day, date%day)
+        @assertEqual(expected_hour, date%hour)
+        @assertEqual(expected_minute, date%minute)
+        @assertEqual(expected_second, date%second)
    end subroutine test_jd2gd_dt
 
    @test
@@ -208,7 +208,7 @@ module test_slamtime
 
         call jd2gd(input_jd, actual_out)
 
-        @assertEqual(actual_out, expected_out, 'The conversion from JD to GD is incorrect')
+        @assertEqual(expected_out, actual_out, 'The conversion from JD to GD is incorrect')
 
    end subroutine test_jd2gd_string
 
@@ -231,13 +231,13 @@ module test_slamtime
         expected_minute = 0
         expected_second = 0.0_dp
         expected_jd = 2459602.5_dp
-        @assertEqual(date%year, expected_year)
-        @assertEqual(date%month, expected_month)
-        @assertEqual(date%day, expected_day)
-        @assertEqual(date%hour, expected_hour)
-        @assertEqual(date%minute, expected_minute)
-        @assertEqual(date%second, expected_second)
-        @assertEqual(date%jd, expected_jd)
+        @assertEqual(expected_year, date%year)
+        @assertEqual(expected_month, date%month)
+        @assertEqual(expected_day, date%day)
+        @assertEqual(expected_hour, date%hour)
+        @assertEqual(expected_minute, date%minute)
+        @assertEqual(expected_second, date%second)
+        @assertEqual(expected_jd, date%jd)
         
         ! test #2: November 12, 2022 23:59:59 UT
         date%mjd = 59554.0_dp
@@ -250,13 +250,13 @@ module test_slamtime
         expected_second = 0
         expected_jd = 2459554.5_dp
         expected_frac = 0.999988425925926_dp
-        @assertEqual(date%year, expected_year)
-        @assertEqual(date%month, expected_month)
-        @assertEqual(date%day, expected_day)
-        @assertEqual(date%hour, expected_hour)
-        @assertEqual(date%minute, expected_minute)
-        @assertEqual(date%second, expected_second)
-        @assertEqual(date%jd, expected_jd)
+        @assertEqual(expected_year, date%year)
+        @assertEqual(expected_month, date%month)
+        @assertEqual(expected_day, date%day)
+        @assertEqual(expected_hour, date%hour)
+        @assertEqual(expected_minute, date%minute)
+        @assertEqual(expected_second, date%second)
+        @assertEqual(expected_jd, date%jd)
     
    end subroutine test_mjd2gd_dt
 
@@ -282,7 +282,7 @@ module test_slamtime
         date%mjd = 58856.0_dp
         call mjd2jd(date)
 
-        @assertEqual(date%jd, 2458856.5_dp)
+        @assertEqual(2458856.5_dp, date%jd)
 
    end subroutine test_mjd2jd
 
@@ -295,12 +295,12 @@ module test_slamtime
     
         date = yyddd2date(yyddd)
     
-        @assertEqual(date%year, 2021)
-        @assertEqual(date%month, 5)
-        @assertEqual(date%day, 3)
-        @assertEqual(date%hour, 10)
-        @assertEqual(date%minute, 57)
-        @assertRelativelyEqual(date%second, 46.569600300863542_dp, tolerance=1.0e-10)
+        @assertEqual(2021, date%year)
+        @assertEqual(5, date%month)
+        @assertEqual(3, date%day)
+        @assertEqual(10, date%hour)
+        @assertEqual(57, date%minute)
+        @assertRelativelyEqual(46.569600300863542_dp, date%second, tolerance=1.0e-10)
    end subroutine test_yyddd2date
 
    @test 
@@ -319,6 +319,7 @@ module test_slamtime
         call gd2mjd(year, month, day, 0, 0, 0.0_dp,DB0, time_mjd)
         expected_yyddd = 00001
         actual_yyddd = mjd2yyddd(time_mjd)
+
         @assertEqual(expected_yyddd, actual_yyddd)
       
         ! Test 2: Check yyddd on 31 Dec 2020
@@ -328,7 +329,8 @@ module test_slamtime
         call gd2mjd(year, month, day, 23, 59, 59.0_dp,DB0, time_mjd)
         expected_yyddd = 20366
         actual_yyddd = mjd2yyddd(time_mjd)
-        @assertEqual(actual_yyddd, expected_yyddd)
+
+        @assertEqual(expected_yyddd, actual_yyddd)
           
    end subroutine test_mjd2yyddd
 
@@ -347,7 +349,7 @@ module test_slamtime
         expected_delT = 36.0
         
         call delta_AT(IY, IM, ID, FD, DELTAT, J)
-        @assertRelativelyEqual(DELTAT, expected_delT, tolerance=1.0e-10)
+        @assertRelativelyEqual(expected_delT, DELTAT, tolerance=1.0e-10)
         
         ! Test case 2: 2017-01-01T00:00:00.0 UTC
         IY = 2017
@@ -357,7 +359,7 @@ module test_slamtime
         expected_delT = 36.0
         
         call delta_AT(IY, IM, ID, FD, DELTAT, J)
-        @assertRelativelyEqual(DELTAT, expected_delT, tolerance=1.0e-10)
+        @assertRelativelyEqual(expected_delT, DELTAT, tolerance=1.0e-10)
         
         ! Test case 3: 2022-12-31T23:59:59.5 UTC
         IY = 2022
@@ -367,7 +369,7 @@ module test_slamtime
         expected_delT = 36.0
         
         call delta_AT(IY, IM, ID, FD, DELTAT, J)
-        @assertRelativelyEqual(DELTAT, expected_delT, tolerance=1.0e-10)
+        @assertRelativelyEqual(expected_delT, DELTAT, tolerance=1.0e-10)
           
    end subroutine test_delta_AT
           
