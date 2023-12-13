@@ -43,7 +43,6 @@ module test_slamlinAlgebra
         ! Call the invert_matrix subroutine
               
         call invert_matrix(A, A_inv, method)
-        write (*,*) A_inv
         ! Define the expected inverse matrix
 
         expected = reshape((/0.2999999, 1.3877787807814457E-017, -0.1, &
