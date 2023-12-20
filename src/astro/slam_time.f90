@@ -572,22 +572,21 @@ module slam_time
   character(len=LEN_TIME_STRING_LONG) function date2longstring(date)
 
     type(time_t),      intent(in)  :: date
-
     real(dp)                       :: second_fraction
 
     ! Handle the leading zero issue for floating point numbers (only for the seconds)
-    if (date%second < 10.d0) then
+    second_fraction = nint((date%second-int(date%second))*1E6)*1E-6
+    if (second_fraction  > 0.999999d0) then
         ! Round to
-        second_fraction = nint((date%second-int(date%second))*1E6)*1E-6
-        if (second_fraction > 0.999999d0) second_fraction = 0.999999d0
+        second_fraction = 0.0d0          
+        ! Create an intermediate adjusted date with seconds increased by 1
         write(date2longstring,'(i4,2("-",i2.2),"T",2(i2.2,":"),(i2.2,f0.6),"Z")')    &
-                date%year, date%month, date%day, date%hour,                          &
-                date%minute, int(date%second), second_fraction
-    else
-        write(date2longstring,'(i4,2("-",i2.2),"T",2(i2.2,":"),(f9.6),"Z")')    &
+              date%year, date%month, date%day, date%hour,                          &
+              date%minute, int(date%second) + 1 , second_fraction 
+    else 
+        write(date2longstring,'(i4,2("-",i2.2),"T",2(i2.2,":"),(i2.2,f0.6),"Z")')    &
                 date%year, date%month, date%day, date%hour,                     &
-                date%minute, date%second
-
+                date%minute, int(date%second), second_fraction
     end if
 
     return
@@ -2070,7 +2069,6 @@ module slam_time
 !! @details     This routine converts a given JD as derived type 'time_t'
 !!              into MJD.
 !!------------------------------------------------------------------------------------------------
-
   subroutine jd2mjd(date)
 
     type(time_t), intent(inout) :: date

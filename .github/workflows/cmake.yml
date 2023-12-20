@@ -2,7 +2,7 @@ name: CMake
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, add-pf-unit-tests ]
   pull_request:
     branches: [ master ]
 
@@ -20,11 +20,25 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Configure CMake pFUnit
+      # Configure pFUnit
+      run: cmake -S pFUnit -B ${{github.workspace}}/pFUnit/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_OpenMP_SUPPORT=OFF -DENABLE_POSTGRESQL_SUPPORT=OFF
+
+    - name: Build pFUnit
+      # Build your program with the given configuration
+      run: cmake --build ${{github.workspace}}/pFUnit/build --config ${{env.BUILD_TYPE}}
+
+    - name: Install pFUnit
+      # install libs and includes in libslam/build/
+      run: cmake --install ${{github.workspace}}/pFUnit/build --config ${{env.BUILD_TYPE}}
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH=${{github.workspace}}/pFUnit/build/installed/
 
     - name: Build
       # Build your program with the given configuration
@@ -34,5 +48,5 @@ jobs:
       working-directory: ${{github.workspace}}/build
       # Execute tests defined by the CMake configuration.  
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C ${{env.BUILD_TYPE}}
+      run: ctest -C ${{env.BUILD_TYPE}} --verbose
       

@@ -97,7 +97,13 @@ program test_time_class
 
     !** create and stuff
     time_class => time_create_from_gd(test_year, test_month, test_day, test_hour, test_minute, test_second, test_time_system)
-
+    write(*,*) time_class%get_year()
+    write(*,*) time_class%get_month()
+    write(*,*) time_class%get_day()
+    write(*,*) time_class%get_hour()
+    write(*,*) time_class%get_minute()
+    write(*,*) time_class%get_second()
+    
     !** check that the correct values are returned here
     error_local = test%assert_equal(time_class%get_year(), test_year, "get_year()")
     error_local = test%assert_equal(time_class%get_month(), test_month, "get_month()")

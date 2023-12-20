@@ -1,0 +1,1143 @@
+!==============================================================================
+!
+!> @anchor  test_slamreduction
+!!
+!> @brief   Program for testing most important functions and subroutines in slam_reduction 
+!!
+!> @author  Arkene Chouchene (AC)
+!!
+!> @date    <ul>
+!!            <li>25.05.2023 (initial design)</li>
+!!          </ul>
+!!
+!! @details Program for testing slam_reduction functions and subroutines 
+!! Sources and Examples are mentioned above every test
+!------------------------------------------------------------------------
+module test_slamreduction
+    use funit
+    use slam_reduction_class 
+    use iso_fortran_env
+    use slam_error_handling
+    use slam_strings, only: toLowercase, toUppercase
+    use slam_types
+    use slam_math, only: pi, halfPi, twoPi, rad2deg, deg2rad
+
+    implicit none
+
+    contains
+
+   @test
+   subroutine test_eci2uvw()
+        type(Reduction_type) :: reduction_model
+        real(dp), dimension(3) :: r, v, vec_in, vec_out
+        real(dp), dimension(3) :: expected
+        real(dp) :: tolerance
+        logical :: initialized = .false.
+        integer :: i 
+        !** init reduction model and EOP
+        call initErrorHandler(control = "YES", errAction = "RETURN", traceback = "YES") 
+        if (.not. initialized) then 
+        reduction_model = Reduction_type() 
+        call reduction_model%initEop('../../data') 
+        initialized = .true. 
+        end if
+
+        ! set up inputs      LEO              SSO            GTO              GEO
+        ! Reference Data : Astropy
+        ! Test case 1 : LEO
+
+        r = (/-3485.799126707284, -5898.652976745232, 835.9701786284777/)    
+        v = (/-1.3525457950562447, -0.2804534841971075, -7.4721873681232385/)
+        vec_in = (/-3480.799126707284, -5890.652976745232, 830.9701786284777/)
+
+        ! Call the subroutine to be tested
+        call reduction_model%eci2uvw(r, v, vec_in, vec_out)
+
+        ! set up expected output
+        expected = (/6892.4777627973053, 3.7547439527169217, 0.74616767353651881/)
+
+        ! set up tolerance
+        tolerance = 1.0d-6
+        ! check if output matches expected
+        do i = 1, 3
+        @assertRelativelyEqual(expected(i), vec_out(i), tolerance)
+        end do
+
+        ! Test case 2 : SSO
+        r = (/1276.3548924297563, -6983.018152962259, -106.49682863132377/)    
+        v = (/-1.1732951530260662, -0.10104993550832023, -7.400186872428055/)
+        vec_in = (/1273.3548924297563, -6980.018152962259, -100.49682863132377/)
+
+        ! Call the subroutine to be tested
+        call reduction_model%eci2uvw(r, v, vec_in, vec_out)
+
+        ! set up expected output
+        expected = (/7095.9244099776133, -5.4964151991261474, -3.3124219231901559/)
+
+        ! set up tolerance
+        tolerance = 1.0d-6
+        ! check if output matches expected
+        do i = 1, 3
+        @assertRelativelyEqual(expected(i), vec_out(i), tolerance)
+
+        end do
+
+        ! Test case 3 : GTO1
+        r = (/31986.08889084533, 3886.249797563777, -17606.478382491812/)    
+        v = (/-0.1326762314352175, 2.0844489979862724, -0.13643320490635982/)
+        vec_in = (/31980.08889084533, 3880.249797563777, -17600.478382491812/)
+
+        ! Call the subroutine to be tested
+        call reduction_model%eci2uvw(r, v, vec_in, vec_out)
+
+        ! set up expected output
+        expected = (/36709.117354264381, -5.2918078044855861, 1.9049307499135466/)
+
+        ! set up tolerance
+        tolerance = 1.0d-6
+        ! check if output matches expected
+        do i = 1, 3
+        @assertRelativelyEqual(expected(i), vec_out(i), tolerance)
+        end do
+
+        ! Test case 4 : GTO2
+        r = (/-2075.594626467358, -11489.252286113591, 2263.027976512451/)    
+        v = (/5.064981180398634, -4.3342458083315885, -2.2944115534853955/)
+        vec_in = (/-2070.594626467358, -11480.252286113591, 2260.027976512451/)
+
+        ! Call the subroutine to be tested
+        call reduction_model%eci2uvw(r, v, vec_in, vec_out)
+
+        ! set up expected output
+        expected = (/11882.392945849790, 3.4565019294730064, 0.51671800780059129/)
+
+        ! set up tolerance
+        tolerance = 1.0d-6
+        ! check if output matches expected
+        do i = 1, 3
+        @assertRelativelyEqual(expected(i), vec_out(i), tolerance)
+
+        end do
+
+        ! Test case 5 : GEO
+
+        r = (/-42044.21889179173, -3193.6719204189853, 105.63094940415252/)    
+        v = (/0.23272475970034712, -3.0658575760606777, 0.0006346736275647091/)
+        vec_in = (/-42040.21889179173, -11470.252286113591, 2250.027976512451/)
+
+        ! Call the subroutine to be tested
+        call reduction_model%eci2uvw(r, v, vec_in, vec_out)
+
+        ! set up expected output
+        expected = (/42793.735297603802, 8253.5502448830557, 2141.1273650557182/)
+
+        ! set up tolerance
+        tolerance = 1.0d-6
+        ! check if output matches expected
+        do i = 1, 3
+        @assertRelativelyEqual(expected(i), vec_out(i), tolerance)
+
+        end do
+
+   end subroutine test_eci2uvw
+
+   @test
+   subroutine test_uvw2eci()
+
+        type(Reduction_type) :: reduction_model
+        real(dp), dimension(3) :: r, v, vec_in, vec_out
+        real(dp), dimension(3) :: expected
+        real(dp) :: tolerance
+        logical :: initialized = .false.
+
+        !** init reduction model and EOP
+        call initErrorHandler(control = "YES", errAction = "RETURN", traceback = "YES") 
+        if (.not. initialized) then 
+        reduction_model = Reduction_type() 
+        call reduction_model%initEop('../../data') 
+        initialized = .true. 
+        end if
+        ! Reference Data : Astropy
+        ! Test case 1 : LEO
+        r = (/-3485.799126707284, -5898.652976745232, 835.9701786284777/)    
+        v = (/-1.3525457950562447, -0.2804534841971075, -7.4721873681232385/)
+        vec_in = (/-34850.799126707284, -5890.652976745232, 830.9701786284777/)
+
+        ! Call the subroutine to be tested
+        call reduction_model%uvw2eci(r, v, vec_in, vec_out)
+
+        ! set up expected output
+        expected = (/19343.552518203756, 29557.687856646771, 1462.4232707883284/)
+
+        ! set up tolerance
+        tolerance = 1.0d-6
+        ! check if output matches expected
+        @assertRelativelyEqual(expected, vec_out, tolerance)
+
+
+        ! Test case 2 : SSO
+        r = (/1276.3548924297563, -6983.018152962259, -106.49682863132377/)    
+        v = (/-1.1732951530260662, -0.10104993550832023, -7.400186872428055/)
+        vec_in = (/1273.3548924297563, -6980.018152962259, -100.49682863132377/)
+
+        ! Call the subroutine to be tested
+        call reduction_model%uvw2eci(r, v, vec_in, vec_out)
+
+        ! set up expected output
+        expected = (/1224.1609907451652, -1175.9210635888585, 6889.9073967493232/)
+
+        ! set up tolerance
+        tolerance = 1.0d-6
+        ! check if output matches expected
+        @assertRelativelyEqual(expected, vec_out, tolerance)
+
+        ! Test case 3 : GTO1
+        r = (/31986.08889084533, 3886.249797563777, -17606.478382491812/)    
+        v = (/-0.1326762314352175, 2.0844489979862724, -0.13643320490635982/)
+        vec_in = (/31980.08889084533, 3880.249797563777, -17600.478382491812/)
+
+        ! Call the subroutine to be tested
+        call reduction_model%uvw2eci(r, v, vec_in, vec_out)
+
+        ! set up expected output
+        expected = (/19025.111494734359, 5688.8397304595519, -30874.610340783529/)
+
+        ! set up tolerance
+        tolerance = 1.0d-6
+        ! check if output matches expected
+
+        @assertRelativelyEqual(expected, vec_out, tolerance)
+
+        ! Test case 4 : GTO2
+        r = (/-2075.594626467358, -11489.252286113591, 2263.027976512451/)    
+        v = (/5.064981180398634, -4.3342458083315885, -2.2944115534853955/)
+        vec_in = (/-2070.594626467358, -11480.252286113591, 2260.027976512451/)
+
+        ! Call the subroutine to be tested
+        call reduction_model%uvw2eci(r, v, vec_in, vec_out)
+
+        ! set up expected output
+        expected = (/-8490.9210849589890, 4987.0794886463200, 6650.1557603492238/)
+
+        ! set up tolerance
+        tolerance = 1.0d-6
+        ! check if output matches expected
+        @assertRelativelyEqual(expected, vec_out, tolerance)
+
+        ! Test case 5 : GEO 
+
+        r = (/-42044.21889179173, -3193.6719204189853, 105.63094940415252/)    
+        v = (/0.23272475970034712, -3.0658575760606777, 0.0006346736275647091/)
+        vec_in = (/-42040.21889179173, -3190.6719204189853, 105.03094940415252/)
+
+        ! Call the subroutine to be tested
+        call reduction_model%uvw2eci(r, v, vec_in, vec_out)
+
+        ! set up expected output
+        expected = (/41677.918063548226, 6365.7329553111986, -0.94475699194919116/)
+
+        ! set up tolerance
+        tolerance = 1.0d-6
+        ! check if output matches expected
+        @assertRelativelyEqual(expected, vec_out, tolerance)
+
+   end subroutine test_uvw2eci
+
+   @test
+   subroutine test_itrf2sez()
+
+        type(Reduction_type) :: reduction_model
+        real(dp), dimension(3) :: vec_itrf, vec_sez, expected
+        real(dp) :: glat, glon, tolerance
+        logical :: initialized = .false.
+        !** init reduction model and EOP
+        call initErrorHandler(control = "YES", errAction = "RETURN", traceback = "YES") 
+        if (.not. initialized) then 
+        reduction_model = Reduction_type() 
+        call reduction_model%initEop('../../data') 
+        initialized = .true. 
+        end if
+
+        ! set up inputs
+        ! Reference Data : Vallado
+        ! Test case 1 : LEO
+
+        vec_itrf = (/-398.17130316387789, -419.56502683380472, 176.24610555633399/) 
+        glat = 39.007_dp
+        glon = 104.883_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%itrf2sez(vec_itrf, glat, glon, vec_sez)
+
+        ! set up expected output
+        expected = (/468.8947, -224.6567, 308.7151/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+        @assertRelativelyEqual(expected, vec_sez, tolerance)
+
+        ! Test case 2 : SSO
+
+        vec_itrf = (/197.15680997234216, 938.95116648127600, -353.02475249672784/) 
+        glat = 42.38_dp
+        glon = 71.13_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%itrf2sez(vec_itrf, glat, glon, vec_sez)
+
+        ! set up expected output
+        expected = (/-773.8654, -581.4980, 328.8145/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+        @assertRelativelyEqual(expected, vec_sez, tolerance)
+
+   end subroutine test_itrf2sez
+
+   @test
+   subroutine test_sez2itrf()
+        type(Reduction_type) :: reduction_model
+        real(dp), dimension(3) :: vec_sez, vec_itrf, expected
+        real(dp) :: glat, glon, tolerance
+        logical :: initialized = .false.
+        !** init reduction model and EOP
+        call initErrorHandler(control = "YES", errAction = "RETURN", traceback = "YES") 
+        if (.not. initialized) then 
+         reduction_model = Reduction_type() 
+         call reduction_model%initEop('../../data') 
+         initialized = .true. 
+        end if
+
+        ! set up inputs
+        ! Reference Data : Vallado
+        ! Test case 1 
+        vec_sez = (/468.8947, -224.6567, 308.7151/)
+        glat = 39.007_dp
+        glon = 104.883_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%sez2itrf(vec_sez, glat, glon, vec_itrf)
+
+        ! set up expected output
+        expected = (/-398.17130316387789, -419.56502683380472, 176.24610555633399/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+
+        @assertRelativelyEqual(expected, vec_itrf, tolerance)
+
+        ! Test case 2 
+        vec_sez = (/-773.8654, -581.4980, 328.8145/)
+        glat = 42.38_dp
+        glon = 71.13_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%sez2itrf(vec_sez, glat, glon, vec_itrf)
+
+        ! set up expected output
+        expected = (/197.15680997234216, 938.95116648127600, -353.02475249672784/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+
+        @assertRelativelyEqual(expected, vec_itrf, tolerance)
+
+   end subroutine test_sez2itrf
+
+
+! @test
+
+!  subroutine test_earthFixed2inertial_rva()
+
+!       type(Reduction_type) :: reduction_model
+!       real(dp), dimension(3) :: r_ef, v_ef, a_ef, r_inr, v_inr, a_inr
+!       real(dp), dimension(3) :: expected_r_inr, expected_v_inr, expected_a_inr
+!       real(dp) :: tolerance
+!       real(dp) :: mjd
+!       logical :: initialized = .false.
+
+!       ! Initialize the reduction model and other variables
+!       call initErrorHandler(control="YES", errAction="RETURN", traceback="YES")
+!       if (.not. initialized) then
+!           reduction_model = Reduction_type()
+!           call reduction_model%initEop('data')
+!           initialized = .true.
+!       end if
+
+!       ! Set up inputs
+!       ! Test case 2 : SSO
+
+!       r_ef = (/1276.3548924297563, -6983.018152962259, -106.49682863132377/) 
+!       v_ef = (/-1.1732951530260662, -0.10104993550832023, -7.400186872428055/)
+!       a_ef = (/1.0_dp, 1.0_dp, 1.0_dp/)
+!       mjd = 0.0_dp
+
+!       ! Call the subroutine to be tested
+!       call reduction_model%earthFixed2inertial_rva(r_ef, v_ef, a_ef, mjd, r_inr, v_inr, a_inr)
+
+!       ! Set up expected outputs
+!       expected_r_inr = (/-0.34957263569556833E-149_dp, 0.70349062009399627E-150_dp, -0.34957263569556833E-149_dp/)
+!       expected_v_inr = (/-0.29835780219559527E-305_dp, -0.93054737470642411E-25_dp, 0.0_dp/)
+!       expected_a_inr = (/0.0_dp, 0.0_dp, 0.0_dp/)
+
+!       ! Set up tolerances
+!       tolerance = 1e-6_dp
+
+!       ! Check if outputs match expected values
+!       @assertRelativelyEqual(r_inr, expected_r_inr, tolerance)
+!       @assertRelativelyEqual(v_inr, expected_v_inr, tolerance)
+!       @assertRelativelyEqual(a_inr, expected_a_inr, tolerance)
+
+!       ! Test case 3 : GTO1
+!       r_ef = (/31986.08889084533, 3886.249797563777, -17606.478382491812/)    
+!       v_ef = (/-0.1326762314352175, 2.0844489979862724, -0.13643320490635982/)
+!       a_ef = (/1.0_dp, 1.0_dp, 1.0_dp/)
+!       mjd = 0.0_dp
+
+!       ! Call the subroutine to be tested
+!       call reduction_model%earthFixed2inertial_rva(r_ef, v_ef, a_ef, mjd, r_inr, v_inr, a_inr)
+!                           ! Set up expected outputs
+!       expected_r_inr = (/-0.34957263569556833E-149_dp, 0.70349062009399627E-150_dp, -0.34957263569556833E-149_dp/)
+!       expected_v_inr = (/-0.29835780219559527E-305_dp, -0.93054737470642411E-25_dp, 0.0_dp/)
+!       expected_a_inr = (/0.0_dp, 0.0_dp, 0.0_dp/)
+
+!       ! Set up tolerances
+!       tolerance = 1e-6_dp
+
+
+!       ! Check if outputs match expected values
+!       @assertRelativelyEqual(r_inr, expected_r_inr, tolerance)
+!       @assertRelativelyEqual(v_inr, expected_v_inr, tolerance)
+!       @assertRelativelyEqual(a_inr, expected_a_inr, tolerance)
+
+
+!   ! Test case 4 : GTO2
+!   r_ef = (/-2075.594626467358, -11489.252286113591, 2263.027976512451/)    
+!   v_ef = (/5.064981180398634, -4.3342458083315885, -2.2944115534853955/)
+!   a_ef = (/1.0_dp, 1.0_dp, 1.0_dp/)
+!   mjd = 0.0_dp
+
+!   ! Call the subroutine to be tested
+!   call reduction_model%earthFixed2inertial_rva(r_ef, v_ef, a_ef, mjd, r_inr, v_inr, a_inr)
+!   ! Set up expected outputs
+!   expected_r_inr = (/-0.34957263569556833E-149_dp, 0.70349062009399627E-150_dp, -0.34957263569556833E-149_dp/)
+!   expected_v_inr = (/-0.29835780219559527E-305_dp, -0.93054737470642411E-25_dp, 0.0_dp/)
+!   expected_a_inr = (/0.0_dp, 0.0_dp, 0.0_dp/)
+
+!   ! Set up tolerances
+!   tolerance = 1e-6_dp
+
+
+!   ! Check if outputs match expected values
+!       @assertRelativelyEqual(r_inr, expected_r_inr, tolerance)
+!       @assertRelativelyEqual(v_inr, expected_v_inr, tolerance)
+!       @assertRelativelyEqual(a_inr, expected_a_inr, tolerance)
+
+!  end subroutine test_earthFixed2inertial_rva
+
+  @test
+  subroutine test_earthFixed2inertial_rv()
+
+        type(Reduction_type) :: reduction_model
+        real(dp), dimension(3) :: r_ef, v_ef, r_inr, v_inr
+        real(dp), dimension(3) :: expected_r_inr, expected_v_inr
+        real(dp) :: tolerance
+        real(dp) :: mjd
+        logical :: initialized = .false.
+        ! Initialize the reduction model and other variables
+        call initErrorHandler(control="YES", errAction="RETURN", traceback="YES")
+         if (.not. initialized) then
+          reduction_model = Reduction_type()
+          call reduction_model%initEop('../../data')
+          initialized = .true.
+        end if
+
+        ! Set up inputs
+        ! Reference Data : Astropy
+        ! Test case 1 : LEO
+        r_ef = (/-3485.799126707284, -5898.652976745232, 835.9701786284777/) 
+        v_ef = (/-1.3525457950562447, -0.2804534841971075, -7.4721873681232385/)
+        mjd = 	59868.16721065_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%earthFixed2inertial_rv(r_ef, v_ef, mjd, r_inr, v_inr)
+
+        ! Set up expected outputs
+        expected_r_inr = (/5543.7970992673218, -4028.7920091557758, 823.95095255406773/)
+        expected_v_inr = (/0.42852383418602069,-0.96910139137846685, -7.4731177953022376/)
+
+        ! Set up tolerances
+        tolerance = 1e-6_dp
+
+        ! Check if outputs match expected values
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
+        @assertRelativelyEqual(expected_v_inr, v_inr, tolerance)
+
+        ! Test case 2 : SSO
+        r_ef = (/1276.3548924297563, -6983.018152962259, -106.49682863132377/) 
+        v_ef = (/-1.1732951530260662, -0.10104993550832023, -7.400186872428055/)
+        mjd = 59868.16721065_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%earthFixed2inertial_rv(r_ef, v_ef, mjd, r_inr, v_inr)
+
+        ! Set up expected outputs
+        expected_r_inr = (/7072.2648613669126, 609.22370162380560, -121.98699255537927/)
+        expected_v_inr = (/-0.71148277287326991E-1, -0.66205424007579217, -7.4000316981254741/)
+
+        ! Set up tolerances
+        tolerance = 1e-6_dp
+
+        ! Check if outputs match expected values
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
+        @assertRelativelyEqual(expected_v_inr, v_inr, tolerance)
+
+        ! Test case 3 : GTO1
+        r_ef =  (/31986.08889084533, 3886.249797563777, -17606.478382491812/)    
+        v_ef =  (/-0.1326762314352175, 2.0844489979862724, -0.13643320490635982/)
+        mjd = 59600_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%earthFixed2inertial_rv(r_ef, v_ef, mjd, r_inr, v_inr)
+
+        ! Set up expected outputs
+        expected_r_inr = (/-19422.944677854495, 25736.971600297715, -17565.832723358180/)
+        expected_v_inr = (/-3.6147018661260226, -2.5725842265577721, -0.12873724090013192/)
+
+        ! Set up tolerances
+        tolerance = 1e-6_dp
+
+        ! Check if outputs match expected values
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
+        @assertRelativelyEqual(expected_v_inr, v_inr, tolerance)
+
+        ! Test case 4 : GTO2
+        r_ef =  (/-2075.594626467358, -11489.252286113591, 2263.027976512451/)    
+        v_ef =  (/5.064981180398634, -4.3342458083315885, -2.2944115534853955/) 
+        mjd = 59600_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%earthFixed2inertial_rv(r_ef, v_ef, mjd, r_inr, v_inr)
+
+        ! Set up expected outputs
+        expected_r_inr = (/10988.388059643426, 3958.7024881264651, 2239.7103486946576/)
+        expected_v_inr = (/0.92065254636489979, 7.3557064084692447, -2.2964870749064481/)
+
+        ! Set up tolerances
+        tolerance = 1e-6_dp
+
+        ! Check if outputs match expected values
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
+        @assertRelativelyEqual(expected_v_inr, v_inr, tolerance)
+
+        ! Test case 5 : GEO
+
+        r_ef =  (/-42044.21889179173, -3193.6719204189853, 105.63094940415252/)    
+        v_ef =  (/0.23272475970034712, -3.0658575760606777, 0.0006346736275647091/) 
+        mjd = 59324.91164626_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%earthFixed2inertial_rv(r_ef, v_ef, mjd, r_inr, v_inr)
+
+        ! Set up expected outputs
+        expected_r_inr = (/42151.662630156716, 1078.8766087037018, 19.774161242768663/)
+        expected_v_inr = (/-0.15718570600600779, 6.1474137010842593, 0.90223200145185404E-3/)
+
+        ! Set up tolerances
+        tolerance = 1e-6_dp
+
+        ! Check if outputs match expected values
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
+        @assertRelativelyEqual(expected_v_inr, v_inr, tolerance)
+
+   end subroutine test_earthFixed2inertial_rv
+
+   @test
+   subroutine test_earthFixed2inertial_r()
+
+        type(Reduction_type) :: reduction_model
+        real(dp), dimension(3) :: r_ef, r_inr
+        real(dp) :: mjd, tolerance
+        real(dp), dimension(3) :: expected_r_inr
+        logical :: initialized = .false.
+
+        !** init reduction model and EOP
+        call initErrorHandler(control = "YES", errAction = "RETURN", traceback = "YES") 
+        if (.not. initialized) then 
+         reduction_model = Reduction_type() 
+         call reduction_model%initEop('../../data') 
+         initialized = .true. 
+        end if
+
+        ! set up inputs
+        ! Reference Data : Astropy
+        ! Test case 1 : LEO
+        r_ef = (/-3485.799126707284, -5898.652976745232, 835.9701786284777/) 
+        mjd = 59868.16721065_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%earthFixed2inertial_r(r_ef, mjd, r_inr)
+
+        ! set up expected output
+        expected_r_inr = (/5543.7970992673218, -4028.7920091557758, 823.95095255406773/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
+
+        ! Test case 2 : SSO
+        r_ef = (/1276.3548924297563, -6983.018152962259, -106.49682863132377/) 
+        mjd = 2450000.0_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%earthFixed2inertial_r(r_ef, mjd, r_inr)
+
+        ! set up expected output
+        expected_r_inr = (/-6195.3089449426943_dp, -3182.2858414848092_dp, 1376.2879473774449_dp/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
+
+        ! Test case 3 : GTO1
+        r_ef = (/31986.08889084533, 3886.249797563777, -17606.478382491812/) 
+        mjd = 2450000.0_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%earthFixed2inertial_r(r_ef, mjd, r_inr)
+
+        ! set up expected output
+        expected_r_inr = (/1325.9633384465537_dp, -20603.560170780896_dp, -30363.400598296554_dp/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
+
+        ! Test case 4 : GTO2
+        r_ef = (/-2075.594626467358, -11489.252286113591, 2263.027976512451/)
+        mjd = 2450000.0_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%earthFixed2inertial_r(r_ef, mjd, r_inr)
+
+        ! set up expected output
+        expected_r_inr = (/-9850.7931103627325_dp, -2444.8938941380229_dp, 6198.1181763580144_dp/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
+
+        ! Test case 5 : GEO
+        r_ef = (/-42044.21889179173, -3193.6719204189853, 105.63094940415252/)
+        mjd = 59324.91164626_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%earthFixed2inertial_r(r_ef, mjd, r_inr)
+
+        ! set up expected output
+        expected_r_inr = (/42151.662630156716, 1078.8766087037018, 19.774161242768663/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+        @assertRelativelyEqual(expected_r_inr, r_inr, tolerance)
+
+   end subroutine test_earthFixed2inertial_r
+
+  !  @test
+  !  subroutine test_inertial2earthFixed_rva()
+  !         type(Reduction_type) :: reduction_model
+  !         real(dp), dimension(3) :: r_inr, v_inr, a_inr, r_ef, v_ef, a_ef
+  !         real(dp) :: mjd, tolerance
+  !         real(dp), dimension(3) :: expected_r_ef, expected_v_ef, expected_a_ef
+  !         logical :: initialized = .false.
+  !         !** init reduction model and EOP
+  !         call initErrorHandler(control = "YES", errAction = "RETURN", traceback = "YES") 
+  !     if (.not. initialized) then 
+  !         reduction_model = Reduction_type() 
+  !         call reduction_model%initEop('data') 
+  !         initialized = .true. 
+  !     end if
+
+  !         ! set up inputs
+  !         ! Test case 1 : LEO
+  !         r_inr = (/1.0_dp, 0.0_dp, 0.0_dp/)
+  !         v_inr = (/0.0_dp, 1.0_dp, 0.0_dp/)
+  !         a_inr = (/0.0_dp, 0.0_dp, 0.0_dp/)
+  !         mjd = 2450000.0_dp
+
+  !         ! Call the subroutine to be tested
+  !         call reduction_model%inertial2earthFixed_rva(r_inr, v_inr, a_inr, mjd, r_ef, v_ef, a_ef)
+
+  !         ! set up expected output
+  !         expected_r_ef = (/1.0_dp, 0.0_dp, 0.0_dp/)
+  !         expected_v_ef = (/0.0_dp, 1.0_dp, 0.0_dp/)
+  !         expected_a_ef = (/0.0_dp, 0.0_dp, 0.0_dp/)
+
+  !         ! set up tolerance
+  !         tolerance = 1e-6_dp
+
+  !         ! check if output matches expected
+  !         @assertRelativelyEqual(r_ef, expected_r_ef, tolerance)
+  !         @assertRelativelyEqual(v_ef, expected_v_ef, tolerance)
+  !         @assertRelativelyEqual(a_ef, expected_a_ef, tolerance)
+
+  !         ! set up inputs
+  !         ! Test case 2 : SSO
+  !         r_inr = (/1.0_dp, 0.0_dp, 0.0_dp/)
+  !         v_inr = (/0.0_dp, 1.0_dp, 0.0_dp/)
+  !         a_inr = (/0.0_dp, 0.0_dp, 0.0_dp/)
+  !         mjd = 2450000.0_dp
+
+  !         ! Call the subroutine to be tested
+  !         call reduction_model%inertial2earthFixed_rva(r_inr, v_inr, a_inr, mjd, r_ef, v_ef, a_ef)
+
+  !         ! set up expected output
+  !         expected_r_ef = (/1.0_dp, 0.0_dp, 0.0_dp/)
+  !         expected_v_ef = (/0.0_dp, 1.0_dp, 0.0_dp/)
+  !         expected_a_ef = (/0.0_dp, 0.0_dp, 0.0_dp/)
+
+  !         ! set up tolerance
+  !         tolerance = 1e-6_dp
+
+  !         ! check if output matches expected
+  !         @assertRelativelyEqual(r_ef, expected_r_ef, tolerance)
+  !         @assertRelativelyEqual(v_ef, expected_v_ef, tolerance)
+  !         @assertRelativelyEqual(a_ef, expected_a_ef, tolerance)
+
+  !         ! set up inputs
+  !         ! Test case 3 : GTO
+  !         r_inr = (/1.0_dp, 0.0_dp, 0.0_dp/)
+  !         v_inr = (/0.0_dp, 1.0_dp, 0.0_dp/)
+  !         a_inr = (/0.0_dp, 0.0_dp, 0.0_dp/)
+  !         mjd = 2450000.0_dp
+
+  !         ! Call the subroutine to be tested
+  !         call reduction_model%inertial2earthFixed_rva(r_inr, v_inr, a_inr, mjd, r_ef, v_ef, a_ef)
+
+  !         ! set up expected output
+  !         expected_r_ef = (/1.0_dp, 0.0_dp, 0.0_dp/)
+  !         expected_v_ef = (/0.0_dp, 1.0_dp, 0.0_dp/)
+  !         expected_a_ef = (/0.0_dp, 0.0_dp, 0.0_dp/)
+
+  !         ! set up tolerance
+  !         tolerance = 1e-6_dp
+
+  !         ! check if output matches expected
+  !         @assertRelativelyEqual(r_ef, expected_r_ef, tolerance)
+  !         @assertRelativelyEqual(v_ef, expected_v_ef, tolerance)
+  !         @assertRelativelyEqual(a_ef, expected_a_ef, tolerance)
+
+  !         ! set up inputs
+  !         ! Test case 4 : GTO2
+  !         r_inr = (/1.0_dp, 0.0_dp, 0.0_dp/)
+  !         v_inr = (/0.0_dp, 1.0_dp, 0.0_dp/)
+  !         a_inr = (/0.0_dp, 0.0_dp, 0.0_dp/)
+  !         mjd = 2450000.0_dp
+
+  !         ! Call the subroutine to be tested
+  !         call reduction_model%inertial2earthFixed_rva(r_inr, v_inr, a_inr, mjd, r_ef, v_ef, a_ef)
+
+  !         ! set up expected output
+  !         expected_r_ef = (/1.0_dp, 0.0_dp, 0.0_dp/)
+  !         expected_v_ef = (/0.0_dp, 1.0_dp, 0.0_dp/)
+  !         expected_a_ef = (/0.0_dp, 0.0_dp, 0.0_dp/)
+
+  !         ! set up tolerance
+  !         tolerance = 1e-6_dp
+
+  !         ! check if output matches expected
+  !       @assertRelativelyEqual(r_ef, expected_r_ef, tolerance)
+  !       @assertRelativelyEqual(v_ef, expected_v_ef, tolerance)
+  !       @assertRelativelyEqual(a_ef, expected_a_ef, tolerance)
+
+  !  end subroutine test_inertial2earthFixed_rva
+
+   @test
+   subroutine test_inertial2earthFixed_rv()
+        type(Reduction_type) :: reduction_model
+        real(dp), dimension(3) :: r_inr, v_inr, r_ef, v_ef
+        real(dp) :: mjd, tolerance
+        real(dp), dimension(3) :: expected_r_ef, expected_v_ef
+        logical :: initialized = .false.
+        !** init reduction model and EOP
+        call initErrorHandler(control = "YES", errAction = "RETURN", traceback = "YES") 
+        if (.not. initialized) then 
+         reduction_model = Reduction_type() 
+         call reduction_model%initEop('../../data') 
+         initialized = .true. 
+        end if
+
+        ! set up inputs
+        ! Reference Data : Astropy
+        ! Test case 1 : LEO
+        r_inr = (/5543.7970992673218, -4028.7920091557758, 823.95095255406773/)
+        v_inr = (/0.42852383418602069,-0.96910139137846685, -7.4731177953022376/)
+        mjd = 59868.16721065_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%inertial2earthFixed_rv(r_inr, v_inr, mjd, r_ef, v_ef)
+
+        ! set up expected output
+        expected_r_ef = (/-3485.799126707284, -5898.652976745232, 835.9701786284777/)
+        expected_v_ef = (/-1.3525457950562447, -0.2804534841971075, -7.4721873681232385/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
+        @assertRelativelyEqual(expected_v_ef, v_ef, tolerance)
+
+        ! Test case 2 : SSO
+        r_inr = (/7072.2648613669126, 609.22370162380560, -121.98699255537927/)
+        v_inr = (/-0.71148277287326991E-1, -0.66205424007579217, -7.4000316981254741/)
+        mjd = 59868.16721065_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%inertial2earthFixed_rv(r_inr, v_inr, mjd, r_ef, v_ef)
+
+        ! set up expected output
+        expected_r_ef = (/1276.3548924297563, -6983.018152962259, -106.49682863132377/)
+        expected_v_ef = (/-1.1732951530260662, -0.10104993550832023, -7.400186872428055/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
+        @assertRelativelyEqual(expected_v_ef, v_ef, tolerance)
+
+
+        ! Test case 3 : GTO1
+        r_inr = (/-19422.944677854495, 25736.971600297715, -17565.832723358180/)
+        v_inr = (/-3.6147018661260226, -2.5725842265577721, -0.12873724090013192/)
+        mjd = 59600_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%inertial2earthFixed_rv(r_inr, v_inr, mjd, r_ef, v_ef)
+
+        ! set up expected output
+        expected_r_ef = (/31986.08889084533, 3886.249797563777, -17606.478382491812/)
+        expected_v_ef = (/-0.1326762314352175, 2.0844489979862724, -0.13643320490635982/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
+        @assertRelativelyEqual(expected_v_ef, v_ef, tolerance)
+
+        ! Test case 4 : GTO2
+        r_inr = (/10988.388059643426, 3958.7024881264651, 2239.7103486946576/)
+        v_inr = (/0.92065254636489979, 7.3557064084692447, -2.2964870749064481/)
+        mjd = 59600_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%inertial2earthFixed_rv(r_inr, v_inr, mjd, r_ef, v_ef)
+
+        ! set up expected output
+        expected_r_ef = (/-2075.594626467358, -11489.252286113591, 2263.027976512451/)
+        expected_v_ef = (/5.064981180398634, -4.3342458083315885, -2.2944115534853955/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
+        @assertRelativelyEqual(expected_v_ef, v_ef, tolerance)
+
+        ! Test case 5 : GEO
+        r_inr = (/42151.662630156716, 1078.8766087037018, 19.774161242768663/)
+        v_inr = (/-0.15718570600600779, 6.1474137010842593, 0.90223200145185404E-3/)
+        mjd = 59324.91164626_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%inertial2earthFixed_rv(r_inr, v_inr, mjd, r_ef, v_ef)
+
+        ! set up expected output
+        expected_r_ef = (/-42044.21889179173, -3193.6719204189853, 105.63094940415252/)
+        expected_v_ef = (/0.23272475970034712, -3.0658575760606777, 0.0006346736275647091/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
+        @assertRelativelyEqual(expected_v_ef, v_ef, tolerance)
+
+   end subroutine test_inertial2earthFixed_rv
+
+   @test
+   subroutine test_inertial2earthFixed_r()
+        type(Reduction_type) :: reduction_model
+        real(dp), dimension(3) :: r_inr, r_ef
+        real(dp) :: mjd, tolerance
+        real(dp), dimension(3) :: expected_r_ef
+        logical :: initialized = .false.
+        !** init reduction model and EOP
+        call initErrorHandler(control = "YES", errAction = "RETURN", traceback = "YES") 
+        if (.not. initialized) then 
+        reduction_model = Reduction_type() 
+        call reduction_model%initEop('../../data') 
+        initialized = .true. 
+        end if
+
+        ! set up inputs
+        ! Reference Data : Astropy
+        ! Test case 1 : LEO
+        r_inr = (/5543.7970992673218, -4028.7920091557758, 823.95095255406773/)
+        mjd = 59868.16721065_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%inertial2earthFixed_r(r_inr, mjd, r_ef)
+
+        ! set up expected output
+        expected_r_ef = (/-3485.799126707284, -5898.652976745232, 835.9701786284777/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
+
+        ! Test case 2 : SSO
+        r_inr = (/-6195.3089449426943, -3182.2858414848092, 1376.2879473774449/)
+        mjd = 2450000.0_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%inertial2earthFixed_r(r_inr, mjd, r_ef)
+
+        ! set up expected output
+        expected_r_ef = (/1276.3548924297563, -6983.018152962259, -106.49682863132377/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
+
+        ! Test case 3 : GTO1
+        r_inr = (/1325.9633384465537, -20603.560170780896, -30363.400598296554/)
+        mjd = 2450000.0_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%inertial2earthFixed_r(r_inr, mjd, r_ef)
+
+        ! set up expected output
+        expected_r_ef = (/31986.08889084533, 3886.249797563777, -17606.478382491812/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
+
+        ! Test case 4 : GTO2
+        r_inr = (/-9850.7931103627325, -2444.8938941380229, 6198.1181763580144/)
+        mjd = 2450000.0_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%inertial2earthFixed_r(r_inr, mjd, r_ef)
+
+        ! set up expected output
+        expected_r_ef = (/-2075.594626467358, -11489.252286113591, 2263.027976512451/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
+
+        ! Test case 5 : GEO
+        r_inr = (/42151.662630156716, 1078.8766087037018, 19.774161242768663/)
+        mjd = 59324.91164626_dp
+
+        ! Call the subroutine to be tested
+        call reduction_model%inertial2earthFixed_r(r_inr, mjd, r_ef)
+
+        ! set up expected output
+        expected_r_ef = (/-42044.21889179173, -3193.6719204189853, 105.63094940415252/)
+
+        ! set up tolerance
+        tolerance = 1e-6_dp
+
+        ! check if output matches expected
+        @assertRelativelyEqual(expected_r_ef, r_ef, tolerance)
+
+   end subroutine test_inertial2earthFixed_r
+end module test_slamreduction 
+
+
+
+! ! Test for ecef2eci_rva subroutine
+! @test
+! subroutine test_ecef2eci_rva()
+!         ! Define input parameters
+!         type(Reduction_type) :: reduction_model
+!         real(dp), dimension(3) :: r_ecef, v_ecef, a_ecef
+!         real(dp) :: mjd, tolerance
+!         ! Define output parameters
+!         real(dp), dimension(3) :: r_eci, v_eci, a_eci, expected_r_eci, expected_v_eci, expected_a_eci
+!         logical :: initialized = .false.
+!         call initErrorHandler(control = "YES", errAction = "RETURN", traceback = "YES") 
+!         if (.not. initialized) then 
+!          reduction_model = Reduction_type() 
+!          call reduction_model%initEop('data') 
+!          initialized = .true. 
+!         end if
+!         ! Set input values
+!         ! Test case 1 : LEO
+!         r_ecef = (/1.0_dp, 2.0_dp, 3.0_dp/)
+!         v_ecef = (/0.1_dp, 0.2_dp, 0.3_dp/)
+!         a_ecef = (/0.01_dp, 0.02_dp, 0.03_dp/)
+!         mjd = 59000.0_dp
+
+!         ! set up expected output
+!         expected_r_eci = (/1.0_dp, 2.0_dp, 3.0_dp/)
+!         expected_v_eci = (/0.1_dp, 0.2_dp, 0.3_dp/)
+!         expected_a_eci = (/0.01_dp, 0.02_dp, 0.03_dp/)
+!         ! Call the subroutine
+!         call reduction_model%ecef2eci_rva(r_ecef, v_ecef, a_ecef, mjd, r_eci, v_eci, a_eci)
+
+!         ! set up tolerance
+!         tolerance = 1e-6_dp
+
+!         ! Perform assertions
+!         @assertRelativelyEqual(r_eci, expected_r_eci, tolerance)
+!         @assertRelativelyEqual(v_eci, expected_v_eci, tolerance)
+!         @assertRelativelyEqual(a_eci, expected_a_eci, tolerance)
+
+!         ! Test case 2 : SSO
+!         r_ecef = (/1.0_dp, 2.0_dp, 3.0_dp/)
+!         v_ecef = (/0.1_dp, 0.2_dp, 0.3_dp/)
+!         a_ecef = (/0.01_dp, 0.02_dp, 0.03_dp/)
+!         mjd = 59000.0_dp
+
+!         ! set up expected output
+!         expected_r_eci = (/1.0_dp, 2.0_dp, 3.0_dp/)
+!         expected_v_eci = (/0.1_dp, 0.2_dp, 0.3_dp/)
+!         expected_a_eci = (/0.01_dp, 0.02_dp, 0.03_dp/)
+!         ! Call the subroutine
+!         call reduction_model%ecef2eci_rva(r_ecef, v_ecef, a_ecef, mjd, r_eci, v_eci, a_eci)
+
+!         ! set up tolerance
+!         tolerance = 1e-6_dp
+
+!         ! Perform assertions
+!         @assertRelativelyEqual(r_eci, expected_r_eci, tolerance)
+!         @assertRelativelyEqual(v_eci, expected_v_eci, tolerance)
+!         @assertRelativelyEqual(a_eci, expected_a_eci, tolerance)
+
+!         ! Test case 3 : GTO1
+!         r_ecef = (/1.0_dp, 2.0_dp, 3.0_dp/)
+!         v_ecef = (/0.1_dp, 0.2_dp, 0.3_dp/)
+!         a_ecef = (/0.01_dp, 0.02_dp, 0.03_dp/)
+!         mjd = 59000.0_dp
+
+!         ! set up expected output
+!         expected_r_eci = (/1.0_dp, 2.0_dp, 3.0_dp/)
+!         expected_v_eci = (/0.1_dp, 0.2_dp, 0.3_dp/)
+!         expected_a_eci = (/0.01_dp, 0.02_dp, 0.03_dp/)
+!         ! Call the subroutine
+!         call reduction_model%ecef2eci_rva(r_ecef, v_ecef, a_ecef, mjd, r_eci, v_eci, a_eci)
+
+!         ! set up tolerance
+!         tolerance = 1e-6_dp
+
+!         ! Perform assertions
+!         @assertRelativelyEqual(r_eci, expected_r_eci, tolerance)
+!         @assertRelativelyEqual(v_eci, expected_v_eci, tolerance)
+!         @assertRelativelyEqual(a_eci, expected_a_eci, tolerance)
+
+!         ! Test case 4 : GTO2
+!         r_ecef = (/1.0_dp, 2.0_dp, 3.0_dp/)
+!         v_ecef = (/0.1_dp, 0.2_dp, 0.3_dp/)
+!         a_ecef = (/0.01_dp, 0.02_dp, 0.03_dp/)
+!         mjd = 59000.0_dp
+
+!         ! set up expected output
+!         expected_r_eci = (/1.0_dp, 2.0_dp, 3.0_dp/)
+!         expected_v_eci = (/0.1_dp, 0.2_dp, 0.3_dp/)
+!         expected_a_eci = (/0.01_dp, 0.02_dp, 0.03_dp/)
+!         ! Call the subroutine
+!         call reduction_model%ecef2eci_rva(r_ecef, v_ecef, a_ecef, mjd, r_eci, v_eci, a_eci)
+
+!         ! set up tolerance
+!         tolerance = 1e-6_dp
+
+!         ! Perform assertions
+!         @assertRelativelyEqual(r_eci, expected_r_eci, tolerance)
+!         @assertRelativelyEqual(v_eci, expected_v_eci, tolerance)
+!         @assertRelativelyEqual(a_eci, expected_a_eci, tolerance)
+
+!    end subroutine test_ecef2eci_rva
+
+  !  ! Test for ecef2eci_rva subroutine
+  !  subroutine test_ecef2eci_rva()
+  !     ! Define input parameters
+  !     real(dp), dimension(3) :: r_ecef, v_ecef, a_ecef
+  !     real(dp) :: mjd
+  !     ! Define output parameters
+  !     real(dp), dimension(3) :: r_eci, v_eci, a_eci
+
+  !     ! Set input values
+  !     r_ecef = (/1.0_dp, 2.0_dp, 3.0_dp/)
+  !     v_ecef = (/0.1_dp, 0.2_dp, 0.3_dp/)
+  !     a_ecef = (/0.01_dp, 0.02_dp, 0.03_dp/)
+  !     mjd = 59000.0_dp
+
+  !     ! Call the subroutine
+  !     call ecef2eci_rva(r_ecef, v_ecef, a_ecef, mjd, r_eci, v_eci, a_eci)
+
+  !     ! Perform assertions
+  !     assert(abs(r_eci(1) - expected_r_eci(1)) < tolerance)
+  !     assert(abs(v_eci(2) - expected_v_eci(2)) < tolerance)
+  !     assert(abs(a_eci(3) - expected_a_eci(3)) < tolerance)
+
+  !     ! Add more assertions as needed
+
+  !     end subroutine test_ecef2eci_rva
+
+  !     ! Test for eci2ecef_rva subroutine
+  !  subroutine test_eci2ecef_rva()
+  !       ! Define input parameters
+  !       real(dp), dimension(3) :: r_eci, v_eci, a_eci
+  !       real(dp) :: mjd
+  !       ! Define output parameters
+  !       real(dp), dimension(3) :: r_ecef, v_ecef, a_ecef
+
+  !       ! Set input values
+  !       r_eci = (/1.0_dp, 2.0_dp, 3.0_dp/)
+  !       v_eci = (/0.1_dp, 0.2_dp, 0.3_dp/)
+  !       a_eci = (/0.01_dp, 0.02_dp, 0.03_dp/)
+  !       mjd = 59000.0_dp
+
+  !       ! Call the subroutine
+  !       call eci2ecef_rva(r_eci, v_eci, a_eci, mjd, r_ecef, v_ecef, a_ecef)
+
+  !       ! Perform assertions
+  !       assert(abs(r_ecef(1) - expected_r_ecef(1)) < tolerance)
+  !       assert(abs(v_ecef(2) - expected_v_ecef(2)) < tolerance)
+  !       assert(abs(a_ecef(3) - expected_a_ecef(3)) < tolerance)
+
+  !       ! Add more assertions as needed
+
+  !  end subroutine test_eci2ecef_rva
