@@ -36,7 +36,7 @@ fi
 cd build
 echo "Executing cmake"
 
-cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_Fortran_COMPILER=$Fortran_COMPILER -DENABLE_OpenMP_SUPPORT=ON -DENABLE_POSTGRESQL_SUPPORT=ON ../
+cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_Fortran_COMPILER=$Fortran_COMPILER -DENABLE_OpenMP_SUPPORT=ON -DENABLE_POSTGRESQL_SUPPORT=ON -DENABLE_PFUNIT=ON ../
 echo "Running make install"
 make install
 if [[ $? -ne 0 ]]; then
