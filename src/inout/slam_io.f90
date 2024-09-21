@@ -700,19 +700,19 @@ subroutine nxtbuf (             &        ! read in next uncommented line from fi
   integer, intent(in) :: ipos           ! demanded position of comment string within input line (0 = no distinct position)
   integer, intent(in) :: ichn           ! I/O channel nuber to read from
 
-  character(len=*), intent(out) :: cbuf  ! return string (first uncommented line found)
+  character(len=*), intent(inout) :: cbuf  ! return string (first uncommented line found)
   integer, intent(inout), optional :: status ! returns the IOS
   !-------------------------------------------------------------------------------------------
 
   !** declaration of local parameters
   character(len=*), parameter :: csubid = 'nxtbuf'   ! subroutine name
-  integer, parameter :: mbflen = 1000                ! maximum line buffer length
   integer, parameter :: mxloop = 1000                ! maximum number of lines to ignore
 
   !** declaration of local variables
-  character(len=2)      :: cunum        ! character buffer for I/O unit number
-  character(len=mbflen) :: cbufrd       ! read buffer
+  character(len=2)         :: cunum        ! character buffer for I/O unit number
+  character(len=len(cbuf)) :: cbufrd       ! read buffer
 
+  integer :: mbflen            ! line buffer length
   integer :: ichr              ! character position loop counter
   integer :: iloop             ! loop couter
   integer :: inx               ! position returned by standard funct. INDEX
@@ -727,6 +727,7 @@ subroutine nxtbuf (             &        ! read in next uncommented line from fi
   end if
 
   cbuf = ''
+  mbflen = len(cbuf)
 
   !** check if I/O channel is connected to a file
   inquire(ichn, opened=lopen)
@@ -819,20 +820,20 @@ subroutine nxtprop     (        &        ! read in next uncommented line from fi
   !-------------------------------------------------------------------------------------------
   character(len=*), intent(in)      :: cprop                                    ! property string to search for
   integer, intent(in)               :: ichn                                     ! I/O channel nuber to read from
-  character(len=*), intent(out)     :: cbuf                                     ! return string (first uncommented line found)
+  character(len=*), intent(inout)   :: cbuf                                     ! return string (first uncommented line found)
   integer, intent(inout), optional  :: status                                   ! returns the IOS
   !-------------------------------------------------------------------------------------------
 
   !** declaration of local parameters
   character(len=*), parameter   :: csubid = 'nxtprop'                           ! subroutine name
-  integer, parameter            :: mbflen = 1000                                ! maximum line buffer length
   integer, parameter            :: mxloop = 1000                                ! maximum number of lines to ignore
 
   !** declaration of local variables
   character(len=2)              :: cunum                                        ! character buffer for I/O unit number
-  character(len=mbflen)         :: cbufrd                                       ! read buffer
+  character(len=len(cbuf))      :: cbufrd                                       ! read buffer
 
-  integer                       :: ichr                                         !character position loop counter
+  integer                       :: mbflen                                       ! line buffer length
+  integer                       :: ichr                                         ! character position loop counter
   integer                       :: iloop                                        ! loop couter
   integer                       :: inx                                          ! position returned by standard funct. INDEX
   integer                       :: ios                                          ! I/O state index
@@ -846,6 +847,7 @@ subroutine nxtprop     (        &        ! read in next uncommented line from fi
   end if
 
   cbuf = ''
+  mbflen = len(cbuf)
 
   !** check if I/O channel is connected to a file
   inquire(ichn, opened=lopen)
