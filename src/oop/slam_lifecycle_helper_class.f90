@@ -49,8 +49,8 @@ module slam_lifecycle_helper_class
 
   private :: lifecycle_helper_create
   public :: lifecycle_helper_create_from_create_function
-  public :: lifecycle_helper_create_if_non_existent_and_ensure_create_call
-  public :: lifecycle_helper_create_if_non_existent_and_ensure_final_call
+  public :: lc_helper_create_if_non_existent_and_ensure_create_call
+  public :: lc_helper_create_if_non_existent_and_ensure_final_call
   public :: lifecycle_helper_finalize
 
 contains
@@ -237,13 +237,13 @@ contains
   end subroutine lifecycle_helper_ensure_create_call
 
 
-  function lifecycle_helper_create_if_non_existent_and_ensure_create_call(existing_helper) result(this)
+  function lc_helper_create_if_non_existent_and_ensure_create_call(existing_helper) result(this)
 
-    character(len = *), parameter :: current_procedure_name = "lifecycle_helper_create_if_non_existent_and_ensure_create_call"
+    character(len = *), parameter :: current_procedure_name = "lc_helper_create_if_non_existent_and_ensure_create_call"
     class(lifecycle_helper_type), pointer, intent(in) :: existing_helper
     class(lifecycle_helper_type), pointer :: this
     class(tehl_type), pointer :: t => null()
-    !    character(len = *), parameter :: current_procedure_name= "lifecycle_helper_create_if_non_existent_and_ensure_create_call"
+    !    character(len = *), parameter :: current_procedure_name= "lc_helper_create_if_non_existent_and_ensure_create_call"
     !    class(low_level_tehl), pointer :: low_level_t => null()
 
     !    low_level_t => low_level_tehl_create_default()
@@ -274,10 +274,10 @@ contains
 
     call t%exit_procedure(current_procedure_name)
 
-  end function lifecycle_helper_create_if_non_existent_and_ensure_create_call
+  end function lc_helper_create_if_non_existent_and_ensure_create_call
 
 
-  function lifecycle_helper_create_if_non_existent_and_ensure_final_call(existing_helper) result(this)
+  function lc_helper_create_if_non_existent_and_ensure_final_call(existing_helper) result(this)
 
     class(lifecycle_helper_type), pointer, intent(in) :: existing_helper
     class(lifecycle_helper_type), pointer :: this
@@ -291,6 +291,6 @@ contains
 
     call this%ensure_final_call()
 
-  end function lifecycle_helper_create_if_non_existent_and_ensure_final_call
+  end function lc_helper_create_if_non_existent_and_ensure_final_call
 
 end module slam_lifecycle_helper_class
