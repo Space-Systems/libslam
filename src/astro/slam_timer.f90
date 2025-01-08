@@ -45,7 +45,6 @@ module slam_timer
   !** public methods
   public :: resetTimer
   public :: startTimer
-  public :: stopTimer
   public :: getElapsedTime
 
   interface getElapsedTime
