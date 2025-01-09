@@ -213,10 +213,12 @@ contains
     else if(iopt == RANDOM_NORMAL .or. iopt == RANDOM_LOG_NORMAL) then
 
       !** check if there is already a number available
-      if(isOtherNumber(iopt) .and. (xmean_prev == xmean) .and. (xsigma_prev == xsigma)) then
+      if(isOtherNumber(iopt)) then 
+        if ((xmean_prev == xmean) .and. (xsigma_prev == xsigma)) then
 
-        getRandomNumber     = otherNumber(iopt)
-        isOtherNumber(iopt) = .false.
+          getRandomNumber     = otherNumber(iopt)
+          isOtherNumber(iopt) = .false.
+        end if
 
       else  !** generate two new numbers
 
