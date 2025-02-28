@@ -572,22 +572,22 @@ module slam_time
   character(len=LEN_TIME_STRING_LONG) function date2longstring(date)
 
     type(time_t),      intent(in)  :: date
+    type(time_t)                   :: tmp_date
     real(dp)                       :: second_fraction
 
     ! Handle the leading zero issue for floating point numbers (only for the seconds)
-    second_fraction = nint((date%second-int(date%second))*1E6)*1E-6
-    if (second_fraction  > 0.999999d0) then
-        ! Round to
-        second_fraction = 0.0d0          
-        ! Create an intermediate adjusted date with seconds increased by 1
-        write(date2longstring,'(i4,2("-",i2.2),"T",2(i2.2,":"),(i2.2,f0.6),"Z")')    &
-              date%year, date%month, date%day, date%hour,                          &
-              date%minute, int(date%second) + 1 , second_fraction 
-    else 
-        write(date2longstring,'(i4,2("-",i2.2),"T",2(i2.2,":"),(i2.2,f0.6),"Z")')    &
-                date%year, date%month, date%day, date%hour,                     &
-                date%minute, int(date%second), second_fraction
+    second_fraction = anint((date%second-int(date%second))*1.0d6)/1.0d6
+    tmp_date%mjd = date%mjd
+    call mjd2gd(tmp_date)  
+    if (second_fraction > 0.999999d0) then
+      ! Handle rounding to the next second using mjd2gd subroutine
+      second_fraction = 0.0d0
+      tmp_date%mjd = date%mjd + 1E-6/sec_per_day
+      call mjd2gd(tmp_date)  
     end if
+    write(date2longstring,'(i4,2("-",i2.2),"T",2(i2.2,":"),i2.2,f0.6),"Z")')  &
+        tmp_date%year, tmp_date%month, tmp_date%day, tmp_date%hour,           &
+        tmp_date%minute, int(tmp_date%second), second_fraction
 
     return
 
