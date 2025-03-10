@@ -4,6 +4,7 @@
 BUILD_TYPE=Debug
 Fortran_COMPILER=gfortran
 LIBSUFFIX="so"
+GENERATOR_FLAGS=""
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
   LIBSUFFIX="so"
 elif [[ "$OSTYPE" == "darwin"* ]]; then
@@ -14,7 +15,7 @@ elif [[ "$OSTYPE" == "MINGW"* ]]; then
   LIBSUFFIX="dll"
 elif [[ "$OSTYPE" == "msys"* ]]; then
   LIBSUFFIX="dll"
-  GENERATOR="MSYS Makefiles"
+  GENERATOR_FLAGS="-G MSYS Makefiles"
 fi
 git submodule update --init --recursive 
 ################################################################################
@@ -33,7 +34,7 @@ cd build || exit || exit
 echo "Updating cmake"
 export PFUNIT_DIR=..//pFUnit/build/installed
 export FC=$Fortran_COMPILER
-cmake -DSKIP_MPI=yes -G "$GENERATOR" ../
+cmake -DSKIP_MPI=yes "$GENERATOR_FLAGS" ../
 echo "Building pFUnit"
 cmake --build .
 cmake --install .
@@ -54,7 +55,7 @@ fi
 cd build || exit || exit
 echo "Executing cmake"
 
-cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_Fortran_COMPILER=$Fortran_COMPILER -DENABLE_OpenMP_SUPPORT=ON -DENABLE_POSTGRESQL_SUPPORT=ON -DENABLE_PFUNIT=ON -G "$GENERATOR" ../
+cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_Fortran_COMPILER=$Fortran_COMPILER -DENABLE_OpenMP_SUPPORT=ON -DENABLE_POSTGRESQL_SUPPORT=ON -DENABLE_PFUNIT=ON "$GENERATOR_FLAGS" ../
 echo "Building libslam"
 cmake --build .
 cmake --install .
