@@ -1411,7 +1411,7 @@ subroutine setError(code, err_type, par, errorMessage)
       latestErrorType = REMARK
       if (cli_verbosity >= REMARKS) then    ! CLI output
 
-        write(*,'(a)') trim(C_REMARK(errorLanguage))//trim(ctemp)//':'
+        write(*,'(a)', advance = "no") trim(C_REMARK(errorLanguage))//trim(ctemp)//':'
         ! Prepare the message based on the optional parameter or the predefined message
         if(present(par)) then
             do i = 1, SIZE_ERROR_PARAMETER
@@ -1429,7 +1429,7 @@ subroutine setError(code, err_type, par, errorMessage)
 
       if (log_verbosity >= REMARKS .and. flag_ichlog) then    ! logfile output
 
-        write(ichlog,'(a)') trim(C_REMARK(errorLanguage))//trim(ctemp)//':'
+        write(ichlog,'(a)', advance = "no") trim(C_REMARK(errorLanguage))//trim(ctemp)//':'
         ! Prepare the message based on the optional parameter or the predefined message
         if(present(par)) then
             do i = 1, SIZE_ERROR_PARAMETER
@@ -1450,7 +1450,7 @@ subroutine setError(code, err_type, par, errorMessage)
       latestErrorType = WARNING
       if (cli_verbosity >= WARNINGS) then    ! CLI output
 
-        write(*,'(a)') trim(C_WARNING(errorLanguage))//trim(ctemp)//':'
+        write(*,'(a)', advance = "no") trim(C_WARNING(errorLanguage))//trim(ctemp)//':'
         ! Prepare the message based on the optional parameter or the predefined message
         if(present(par)) then
             do i = 1, SIZE_ERROR_PARAMETER
@@ -1468,7 +1468,7 @@ subroutine setError(code, err_type, par, errorMessage)
 
       if (log_verbosity >= WARNINGS .and. flag_ichlog) then    ! logfile output
 
-        write(ichlog,'(a)') trim(C_WARNING(errorLanguage))//trim(ctemp)//':'
+        write(ichlog,'(a)', advance = "no") trim(C_WARNING(errorLanguage))//trim(ctemp)//':'
         ! Prepare the message based on the optional parameter or the predefined message
         if(present(par)) then
             do i = 1, SIZE_ERROR_PARAMETER
@@ -1489,7 +1489,7 @@ subroutine setError(code, err_type, par, errorMessage)
       latestErrorType = FATAL
       if (cli_verbosity >= ERRORS) then    ! CLI output
 
-        write(*,'(a)') trim(C_FATAL(errorLanguage))//trim(ctemp)//':'
+        write(*,'(a)', advance = "no") trim(C_FATAL(errorLanguage))//trim(ctemp)//':'
         write(*,'(a)') '  '//trim(cmess)
         if(errorAction == ERR_ABORT) write(*,'(a)') '  '//C_TERMINATED(errorLanguage)
 
