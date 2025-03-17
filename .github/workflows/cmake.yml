@@ -1,5 +1,9 @@
 name: CMake
 
+permissions:
+  checks: write
+  pull-requests: write # only required if `comment: true` was enabled
+
 on:
   push:
     branches: [ master, add-pf-unit-tests ]
