@@ -3,4 +3,5 @@ lib/
 build/
 doc/latex/
 .DS_store
+*.mod
 test_report.xml
