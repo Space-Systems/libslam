@@ -134,8 +134,9 @@ module slam_time
   public :: assignment(=)
   public :: checkDate
   public :: checkTimeFormat
-  public :: date2longstring
   public :: date2string
+  public :: date2longstring
+  public :: getCurrentUtcTime
   public :: dayFraction2hms
   public :: delta_AT
   public :: tokenizeDate
@@ -544,6 +545,40 @@ module slam_time
     return
 
   end function checkTimeFormat
+!----------------------------------------------------------------
+  
+  !=============================================================================
+  !
+!> @anchor      getCurrentUtcTime
+!!
+!> @brief       Returns the current date and time in UTC
+!> @author      Daniel Lubián-Arenillas
+!!
+!> @date        <ul>
+!!                <li> 11.04.2025 (initial design)</li>
+!!              </ul>
+!!
+!-----------------------------------------------------------------------------
+  subroutine getCurrentUtcTime(datetimeUtc)
+    type(time_t),intent(out) :: datetimeUtc
+    integer, dimension(8)   :: date_values ! date string
+    real(dp) :: tzDiff
+    
+    call date_and_time(values=date_values)
+    datetimeUtc%year   = date_values(1)
+    datetimeUtc%month  = date_values(2)
+    datetimeUtc%day    = date_values(3)
+    datetimeUtc%hour   = date_values(5)
+    datetimeUtc%minute = date_values(6)
+    datetimeUtc%second = date_values(7)
+
+    call gd2mjd(datetimeUtc)
+    tzDiff = dble(date_values(4)) / 60 / 24  ! The time difference from UTC in minutes converted to days
+    datetimeUtc%mjd = datetimeUtc%mjd - tzDiff
+
+    call mjd2gd(datetimeUtc)
+    
+  end subroutine getCurrentUtcTime
 !----------------------------------------------------------------
 
 !=========================================================================
