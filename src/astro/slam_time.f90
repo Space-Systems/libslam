@@ -610,23 +610,32 @@ module slam_time
     type(time_t)                   :: tmp_date
     real(dp)                       :: second_fraction
 
+    ! Ensure mjd is filled, as it is used as reference for everything
+    tmp_date = date
+    if (tmp_date%mjd - tiny(1d0) <= epsilon(1d0)) then
+      call gd2mjd_dt(tmp_date)
+    end if
+
     ! Handle the leading zero issue for floating point numbers (only for the seconds)
     second_fraction = anint((date%second-int(date%second))*1.0d6)/1.0d6
-    tmp_date%mjd = date%mjd
-    call mjd2gd(tmp_date)  
+    call mjd2gd(tmp_date)
     if (second_fraction > 0.999999d0) then
       ! Handle rounding to the next second using mjd2gd subroutine
       second_fraction = 0.0d0
-      tmp_date%mjd = date%mjd + 1E-6/sec_per_day
+      tmp_date%mjd = tmp_date%mjd + 1E-6/sec_per_day
       call mjd2gd(tmp_date)  
     end if
-    write(date2longstring,'(i4,2("-",i2.2),"T",2(i2.2,":"),i2.2,f0.6),"Z")')  &
+
+    ! Return date string with microseconds and a trailing Z for UTC
+    write(date2longstring,'(i4,2("-",i2.2),"T",2(i2.2,":"),i2.2,f0.6,"Z")')  &
         tmp_date%year, tmp_date%month, tmp_date%day, tmp_date%hour,           &
         tmp_date%minute, int(tmp_date%second), second_fraction
 
     return
 
   end function date2longstring
+
+
 
 !=========================================================================
 !

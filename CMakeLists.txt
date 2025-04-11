@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.0.2)
+cmake_minimum_required (VERSION 3.21)
 
 # Name the project slam, generating a library (in ./lib),
 # its testing environment (in ./tests) and documentation (in ./doc)
