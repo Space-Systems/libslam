@@ -128,6 +128,7 @@ module slam_time
   public :: getTimeTypeId
   public :: getTimeTypeString
   public :: getDateTimeNow
+  public :: getDateTimeNowUtc
 
   !** others
   public :: operator(>)
@@ -136,7 +137,6 @@ module slam_time
   public :: checkTimeFormat
   public :: date2string
   public :: date2longstring
-  public :: getCurrentUtcTime
   public :: dayFraction2hms
   public :: delta_AT
   public :: tokenizeDate
@@ -559,26 +559,25 @@ module slam_time
 !!              </ul>
 !!
 !-----------------------------------------------------------------------------
-  subroutine getCurrentUtcTime(datetimeUtc)
-    type(time_t),intent(out) :: datetimeUtc
-    integer, dimension(8)   :: date_values ! date string
+  type(time_t) function getDateTimeNowUtc() result(datetimeUtc)
+    integer, dimension(8)   :: dt ! date string
     real(dp) :: tzDiff
     
-    call date_and_time(values=date_values)
-    datetimeUtc%year   = date_values(1)
-    datetimeUtc%month  = date_values(2)
-    datetimeUtc%day    = date_values(3)
-    datetimeUtc%hour   = date_values(5)
-    datetimeUtc%minute = date_values(6)
-    datetimeUtc%second = date_values(7)
+    call date_and_time(values=dt)
+    datetimeUtc%year   = dt(1)
+    datetimeUtc%month  = dt(2)
+    datetimeUtc%day    = dt(3)
+    datetimeUtc%hour   = dt(5)
+    datetimeUtc%minute = dt(6)
+    datetimeUtc%second = dble(dt(7)) + dble(dt(8))*1.d-3
 
     call gd2mjd(datetimeUtc)
-    tzDiff = dble(date_values(4)) / 60 / 24  ! The time difference from UTC in minutes converted to days
+    tzDiff = dble(dt(4)) / 60 / 24  ! The time difference from UTC in minutes converted to days
     datetimeUtc%mjd = datetimeUtc%mjd - tzDiff
 
     call mjd2gd(datetimeUtc)
     
-  end subroutine getCurrentUtcTime
+  end function getDateTimeNowUtc
 !----------------------------------------------------------------
 
 !=========================================================================
