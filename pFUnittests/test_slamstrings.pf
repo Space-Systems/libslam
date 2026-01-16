@@ -1,0 +1,42 @@
+!==============================================================================
+!
+!> @anchor  test_slamstrings
+!!
+!> @brief   Program for testing most important functions and subroutines in test_slamstrings
+!!
+!> @author  Oscar Rodriguez (AC)
+!!
+!> @date    <ul>
+!!            <li>19.08.2025 (initial design)</li>
+!!          </ul>
+!!
+!! @details Program for testing slam_time functions and subroutines 
+!! Sources and Examples are mentioned above every test
+!------------------------------------------------------------------------
+module test_slamstrings
+    use funit
+    use slam_strings
+    use iso_fortran_env
+    use slam_error_handling
+    use slam_types
+    use slam_math, only: pi, halfPi, twoPi, rad2deg, deg2rad
+    
+    
+    implicit none
+
+    contains
+    @test
+    subroutine test_intArrayToString()
+        integer, dimension (4)  :: iArray
+        iArray=1
+        @assertEqual("[1, 1, 1, 1]", toString(iArray))
+    end subroutine test_intArrayToString
+
+    @test
+    subroutine test_realArrayToString()
+        real(dp), dimension (2)  :: rArray
+        rArray=2.5_dp
+        @assertEqual("[2.5000000000000000, 2.5000000000000000]", toString(rArray))
+    end subroutine test_realArrayToString
+          
+end module test_slamstrings

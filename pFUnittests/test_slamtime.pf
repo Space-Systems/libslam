@@ -75,7 +75,7 @@ module test_slamtime
         ! Tests that the date2longstring function correctly converts a time_t object to a long string
 
         type(time_t) :: date
-        character(len=LEN_TIME_STRING_LONG) :: date_str
+        character(len=LEN_TIME_STRING_LONG) :: date_str, date_input
 
         date%year = 2021
         date%month = 5
@@ -88,8 +88,78 @@ module test_slamtime
 
         @assertEqual('2021-05-03T12:09:05.445566Z', date_str)
 
+        ! Corner case that failed before fix of leading seconds
+        ! It was giving "2025-02-01T15:49:00.000Z"
+        date_input = "2025-02-01T15:50:00.000Z"
+        call tokenizeDate(date_input, date)
+
+        date_str = date2longstring(date)
+        ! Loss of precision due to use of double precision for MJD
+        @assertEqual("2025-02-01T15:49:59.999982Z", date_str)
+
    end subroutine test_date2longstring
-    
+
+   @test
+   subroutine test_checktimeformat()
+        ! Test that we are able to properly recognize any ISO8601 compatible time format
+
+
+        character(len=127) :: date_str
+
+        ! good time strings
+        ! No time zone
+        date_str = "2023-01-01T00:00:00"
+        @assertTrue(checkTimeFormat(date_str))
+        date_str = "2023-01-01T00:00:00."
+        @assertTrue(checkTimeFormat(date_str))
+        date_str = "2023-01-01T00:00:00.00"
+        @assertTrue(checkTimeFormat(date_str))
+        ! Zulu timezone
+        date_str = "2023-01-01T00:00:00.000000Z"
+        @assertTrue(checkTimeFormat(date_str))
+        date_str = "2023-01-01T00:00:00.000Z"
+        @assertTrue(checkTimeFormat(date_str))
+        date_str = "2023-01-01T00:00:00Z"
+        @assertTrue(checkTimeFormat(date_str))
+        date_str = "2023-01-01T00:00:00.Z"
+        @assertTrue(checkTimeFormat(date_str))
+        date_str = "2023-01-01T00:00:00.0Z"
+        @assertTrue(checkTimeFormat(date_str))
+        ! Positive Time zone offset
+        date_str = "2023-01-01T00:00:00.000000+01:01"
+        @assertTrue(checkTimeFormat(date_str))
+        date_str = "2023-01-01T00:00:00.000+01:01"
+        @assertTrue(checkTimeFormat(date_str))
+        date_str = "2023-01-01T00:00:00+01:01"
+        @assertTrue(checkTimeFormat(date_str))
+        date_str = "2023-01-01T00:00:00.+01:01"
+        @assertTrue(checkTimeFormat(date_str))
+        date_str = "2023-01-01T00:00:00.0+01:01"
+        @assertTrue(checkTimeFormat(date_str))
+        ! Negative Time zone offset
+        date_str = "2023-01-01T00:00:00.000000-01:01"
+        @assertTrue(checkTimeFormat(date_str))
+        date_str = "2023-01-01T00:00:00.000-01:01"
+        @assertTrue(checkTimeFormat(date_str))
+        date_str = "2023-01-01T00:00:00-01:01"
+        @assertTrue(checkTimeFormat(date_str))
+        date_str = "2023-01-01T00:00:00.-01:01"
+        @assertTrue(checkTimeFormat(date_str))
+        date_str = "2023-01-01T00:00:00.0-01:01"
+        @assertTrue(checkTimeFormat(date_str))
+
+        ! Wrong Formats
+        date_str = "2023-01-01T00:00"
+        @assertFalse(checkTimeFormat(date_str))
+        date_str = "2023-01-01TAA:00:00.Z"
+        @assertFalse(checkTimeFormat(date_str))
+        date_str = "2023-01-01TAA:00:00.-+01:01"
+        @assertFalse(checkTimeFormat(date_str))
+
+   end subroutine test_checktimeformat
+
+
+
    @test
    subroutine test_gd2jd_std()
         ! Tests that the gd2jd_std function correctly converts Gregorian dates to Julian dates
@@ -372,5 +442,47 @@ module test_slamtime
         @assertRelativelyEqual(expected_delT, DELTAT, tolerance=1.0e-10)
           
    end subroutine test_delta_AT
+
+   @test
+   subroutine test_parseDate
+     implicit none
+     type(time_t)              :: date
+     character(:), allocatable :: date_str
+     real(dp), parameter       :: tolerance=1e-4
+
+     date_str = "2025-01-01T05:00:00.00Z"
+
+     call parseDateString(date_str, date)
+
+     @assertEqual(2025, date%year)
+     @assertEqual(1, date%month)
+     @assertEqual(1, date%day)
+     @assertEqual(5, date%hour)
+     @assertEqual(0, date%minute)
+     @assertEqual(0._dp, date%second,tolerance=tolerance)
+
+     date_str = "2025-01-01T05:00:10"
+     call parseDateString(date_str, date)
+     @assertEqual(2025, date%year)
+     @assertEqual(1, date%month)
+     @assertEqual(1, date%day)
+     @assertEqual(5, date%hour)
+     @assertEqual(0, date%minute)
+     @assertEqual(10._dp, date%second,tolerance=tolerance)
+
+     date_str = "2025-01-01T05:00:10.0000+02:00"
+     call parseDateString(date_str, date)
+     @assertEqual(2025, date%year)
+     @assertEqual(1, date%month)
+     @assertEqual(1, date%day)
+     @assertEqual(7, date%hour)
+     @assertEqual(0, date%minute)
+     @assertEqual(10._dp, date%second,tolerance=tolerance)
+
+
+
+
+
+   end subroutine
           
 end module test_slamtime
