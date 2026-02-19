@@ -179,8 +179,9 @@ contains
 !!------------------------------------------------------------------------------------------------
 
   real(dp) function getRandomNumber(iopt, xmean, xsigma)
-
+    use ieee_arithmetic
     implicit none
+    
 
     integer, intent(in) :: iopt
     real(dp),  intent(in) :: xmean
@@ -195,8 +196,8 @@ contains
     real(dp), dimension(2:3),save :: otherNumber     ! storing the second generated random number for normal (=2) and log-normal (=3) distributions
     real(dp), save :: xmean_prev, xsigma_prev        ! mean and st. dev. from previous call, 'otherNumber' is only returned if these values are equal
                                                      ! to xmean and xsigma
-
-
+    ! Initialize to NAN, to help catching issues 
+    getRandomNumber=ieee_value(getRandomNumber, ieee_quiet_nan)
     !** initialize if not done yet...
     if(.not. initialized) then
 
@@ -211,17 +212,13 @@ contains
       getRandomNumber = xmean + getRandomNumber*(xsigma - xmean)
 
     else if(iopt == RANDOM_NORMAL .or. iopt == RANDOM_LOG_NORMAL) then
-
+      
       !** check if there is already a number available
       if(isOtherNumber(iopt) .and. (xmean_prev == xmean) .and. (xsigma_prev == xsigma)) then
-
-        getRandomNumber     = otherNumber(iopt)
-        isOtherNumber(iopt) = .false.
-
+          getRandomNumber     = otherNumber(iopt)
+          isOtherNumber(iopt) = .false.
       else  !** generate two new numbers
-
         do
-
           call random_number(ran1)
           call random_number(ran2)
           v1   = 2.d0*ran1 - 1.d0
@@ -256,7 +253,6 @@ contains
       end if
 
     end if
-
     return
 
   end function getRandomNumber

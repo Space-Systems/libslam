@@ -1,0 +1,52 @@
+!==============================================================================
+!
+!> @anchor  test_slamtime
+!!
+!> @brief   Program for testing most important functions and subroutines in randomNumber
+!!
+!> @author  Oscar Rodriguez (AC)
+!!
+!> @date    <ul>
+!!            <li>28.07.2025 (initial design)</li>
+!!          </ul>
+!!
+!! @details Program for testing slamRandomNumber functions and subroutines 
+!! Sources and Examples are mentioned above every test
+!------------------------------------------------------------------------
+module test_slamrandomNumber
+    use funit
+    use slam_time
+    use iso_fortran_env
+    use ieee_arithmetic
+    use slam_types
+    use slam_randomNumber
+    
+    
+    implicit none
+
+    contains
+
+    @test
+    subroutine test_randomNumber()
+        implicit None
+        real(dp)            :: x_mean, x_sigma, X_random, X_second_random
+        integer             :: iIndex
+
+        call initRandomSeed(1)
+        
+        x_random = getRandomNumber(RANDOM_NORMAL, 0._dp, 1._dp)
+        ! Check that the random state is not a NAN
+        @assertFalse(ieee_is_nan(X_random))
+
+        ! Check that sucessive calls to random number with the same mean and sigma does not return the same result
+        x_mean=4.0_dp
+        x_sigma=3.0_dp
+        x_random = getRandomNumber(RANDOM_NORMAL, x_mean, x_sigma)
+        X_second_random = getRandomNumber(RANDOM_NORMAL, x_mean, x_sigma)
+        @assertNotEqual(x_random, x_second_random)
+
+    end subroutine
+
+
+          
+end module test_slamrandomNumber

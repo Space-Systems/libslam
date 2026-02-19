@@ -84,6 +84,10 @@ module slam_time
     module procedure tokenizeDate_std, tokenizeDate_drv
   end interface tokenizeDate
 
+  interface parseDateString
+      module procedure tokenizeDate_drv
+  end interface
+
   interface gd2mjd
     module procedure gd2mjd_dt, gd2mjd_std
   end interface gd2mjd
@@ -128,17 +132,19 @@ module slam_time
   public :: getTimeTypeId
   public :: getTimeTypeString
   public :: getDateTimeNow
+  public :: getDateTimeNowUtc
 
   !** others
   public :: operator(>)
   public :: assignment(=)
   public :: checkDate
   public :: checkTimeFormat
-  public :: date2longstring
   public :: date2string
+  public :: date2longstring
   public :: dayFraction2hms
   public :: delta_AT
   public :: tokenizeDate
+  public :: parseDateString
   public :: gd2jd
   public :: gd2mjd
   public :: is_leap_year
@@ -477,7 +483,8 @@ module slam_time
 !
 !> @anchor checkTimeFormat
 !> @brief Checks for supported time formats
-!> @returns logical indicating if the time format is valid or not
+!> @returns logical indicating if the time format is valid or not according
+!> to ISO8601 -> YYYY-MM-DDThh:mm:ss[.s+][Z?][[+-]hh:mm]
 !---------------------------------------------------
   logical function checkTimeFormat(check)
 
@@ -485,9 +492,29 @@ module slam_time
 
     integer :: ctest
     integer :: i  ! counter
+    integer :: decimal_pos ! position of decimal point
+    integer :: tz_pos ! position of timezone indicator
+    integer :: str_len ! Len of trimed str
 
     !** initialise
     checkTimeFormat = .false.
+    tz_pos =0
+    decimal_pos=0
+    str_len = len_trim(check)
+    if (str_len < 19) return
+
+    decimal_pos = index(check, '.')
+    tz_pos = max(index(check, 'Z'), index(check, '+', .true.), index(check, '-', .true.))
+    
+    ! If timezone indicator found but it's part of the date (position 5 or 8), ignore it
+    if (tz_pos == 5 .or. tz_pos == 8) then
+        if (str_len>19) then
+          tz_pos = max(index(check(20:), '+'), index(check(20:), '-'))
+          if (tz_pos > 0) tz_pos = tz_pos + 19
+        else
+          tz_pos=0
+        end if
+    end if
 
     do i=1,len_trim(check)
       ctest = ichar(check(i:i))
@@ -516,26 +543,44 @@ module slam_time
           !** not a ':'
           return
         end if
-      !** checking 'Z'
-      else if(i == 20) then
-        !** check if there is a time zone designator
-        if(len_trim(check) > 20) then
-          if((ctest /= 43).and.(ctest /= 45).and.(ctest /= 46)) then
-            !** not a '+' or a '-' or a '.'
-            return
-          end if
-        else
-          if(ctest /= 90) then
-            !** not a 'Z'
-            return
-          end if
-        end if
-      !** checking '+/-hh:mm'
-      else if((i == 21).or.(i == 22).or.(i == 24).or.(i == 25)) then ! hh
-        if((ctest < 48).or.(ctest > 57)) then
-          !** not a digit
+      else if (i==decimal_pos) then
+        if(ctest /= 46) then
+          !** not a '.'
           return
-        end if
+          end if
+      !** checking fractional seconds part
+      else if (decimal_pos > 0 .and. i > decimal_pos .and. &
+                 (tz_pos == 0 .or. i < tz_pos)) then
+          if((ctest < 48).or.(ctest > 57)) then
+              !** not a digit in fractional seconds
+              return
+          end if
+      
+      ! ** checking timezone or offset (+-HH:MM)
+       else if (tz_pos > 0 .and. i >= tz_pos) then
+            if (i == tz_pos) then
+                ! Should be Z, + or -
+                if((ctest /= 43).and.(ctest /= 45).and.(ctest /= 90)) then
+                    return
+                end if
+            else if (ctest == 90) then  ! 'Z'
+                ! Z should be the last character
+                if (i /= str_len) return
+            else if ((i == tz_pos + 1) .or. (i == tz_pos + 2) .or. &
+                     (i == tz_pos + 4) .or. (i == tz_pos + 5)) then
+                ! Hours and minutes in timezone offset
+                if((ctest < 48).or.(ctest > 57)) then
+                    return
+                end if
+            else if (i == tz_pos + 3) then
+                ! Colon in timezone offset
+                if(ctest /= 58) then
+                    return
+                end if
+            else
+                ! Invalid character in timezone
+                return
+            end if
       end if
     end do
 
@@ -544,6 +589,39 @@ module slam_time
     return
 
   end function checkTimeFormat
+!----------------------------------------------------------------
+  
+  !=============================================================================
+  !
+!> @anchor      getCurrentUtcTime
+!!
+!> @brief       Returns the current date and time in UTC
+!> @author      Daniel Lubián-Arenillas
+!!
+!> @date        <ul>
+!!                <li> 11.04.2025 (initial design)</li>
+!!              </ul>
+!!
+!-----------------------------------------------------------------------------
+  type(time_t) function getDateTimeNowUtc() result(datetimeUtc)
+    integer, dimension(8)   :: dt ! date string
+    real(dp) :: tzDiff
+    
+    call date_and_time(values=dt)
+    datetimeUtc%year   = dt(1)
+    datetimeUtc%month  = dt(2)
+    datetimeUtc%day    = dt(3)
+    datetimeUtc%hour   = dt(5)
+    datetimeUtc%minute = dt(6)
+    datetimeUtc%second = dble(dt(7)) + dble(dt(8))*1.d-3
+
+    call gd2mjd(datetimeUtc)
+    tzDiff = dble(dt(4)) / 60 / 24  ! The time difference from UTC in minutes converted to days
+    datetimeUtc%mjd = datetimeUtc%mjd - tzDiff
+
+    call mjd2gd(datetimeUtc)
+    
+  end function getDateTimeNowUtc
 !----------------------------------------------------------------
 
 !=========================================================================
@@ -572,27 +650,35 @@ module slam_time
   character(len=LEN_TIME_STRING_LONG) function date2longstring(date)
 
     type(time_t),      intent(in)  :: date
-
+    type(time_t)                   :: tmp_date
     real(dp)                       :: second_fraction
 
-    ! Handle the leading zero issue for floating point numbers (only for the seconds)
-    if (date%second < 10.d0) then
-        ! Round to
-        second_fraction = nint((date%second-int(date%second))*1E6)*1E-6
-        if (second_fraction > 0.999999d0) second_fraction = 0.999999d0
-        write(date2longstring,'(i4,2("-",i2.2),"T",2(i2.2,":"),(i2.2,f0.6),"Z")')    &
-                date%year, date%month, date%day, date%hour,                          &
-                date%minute, int(date%second), second_fraction
-    else
-        write(date2longstring,'(i4,2("-",i2.2),"T",2(i2.2,":"),(f9.6),"Z")')    &
-                date%year, date%month, date%day, date%hour,                     &
-                date%minute, date%second
-
+    ! Ensure mjd is filled, as it is used as reference for everything
+    tmp_date = date
+    if (tmp_date%mjd - tiny(1d0) <= epsilon(1d0)) then
+      call gd2mjd_dt(tmp_date)
     end if
+
+    ! Handle the leading zero issue for floating point numbers (only for the seconds)
+    call mjd2gd(tmp_date)
+    second_fraction = anint((tmp_date%second-int(tmp_date%second))*1.0d6)/1.0d6
+    if (second_fraction > 0.999999d0) then
+      ! Handle rounding to the next second using mjd2gd subroutine
+      second_fraction = 0.0d0
+      tmp_date%mjd = tmp_date%mjd + 1.0E-6_dp/sec_per_day
+      call mjd2gd(tmp_date)  
+    end if
+    
+    ! Return date string with microseconds and a trailing Z for UTC
+    write(date2longstring,'(i4,2("-",i2.2),"T",2(i2.2,":"),i2.2,f0.6,"Z")')  &
+        tmp_date%year, tmp_date%month, tmp_date%day, tmp_date%hour,           &
+        tmp_date%minute, int(tmp_date%second), second_fraction
 
     return
 
   end function date2longstring
+
+
 
 !=========================================================================
 !
@@ -2070,7 +2156,6 @@ module slam_time
 !! @details     This routine converts a given JD as derived type 'time_t'
 !!              into MJD.
 !!------------------------------------------------------------------------------------------------
-
   subroutine jd2mjd(date)
 
     type(time_t), intent(inout) :: date
@@ -2402,7 +2487,7 @@ end subroutine mjd2gd_std
 
     !** locals
     character(len=*), parameter :: csubid = 'tokenizeDate_std'
-    character(len=25) :: ctime
+    character(len=len(cin)) :: ctime
     integer   :: hr_add           ! hours to add to get UTC
     integer   :: mi_add           ! minutes to add to get UTC
     integer   :: zone_index       ! pointer to the + or - sign
@@ -2410,6 +2495,7 @@ end subroutine mjd2gd_std
     integer   :: zulu_index       ! pointer to the Z at the end
     integer   :: last_index       ! length of the string
     integer   :: fraction_end_index ! points to the list fraction of the second + 1
+    integer   :: subsecond_precision ! total subsecond decimals
     real(dp)  :: second_fraction  ! milliseconds in the iso datetune
 
     real(dp)  :: jd         ! temporary julian day
@@ -2444,8 +2530,9 @@ end subroutine mjd2gd_std
         fraction_end_index = last_index + 1
         if (zulu_index /= 0) fraction_end_index = zulu_index
         if (zone_index /= 0) fraction_end_index = zone_index
+        subsecond_precision= fraction_end_index-decimal_index
         read(ctime(decimal_index+1:fraction_end_index-1),*) second_fraction
-        sc = sc + second_fraction / 1000.d0
+        sc = sc + second_fraction / 10.0_dp**subsecond_precision
       end if
 
       !** correct time zone
@@ -2454,7 +2541,7 @@ end subroutine mjd2gd_std
 
         read(ctime(zone_index+1:zone_index+2),*) hr_add
         ! Check for the minute correction
-        if (index(ctime,':',.true.) > 20) read(ctime(zone_index+3:zone_index+4),*) mi_add
+        if (index(ctime,':',.true.) > 20) read(ctime(zone_index+4:zone_index+5),*) mi_add
 
         call gd2jd(yr, mo, dy, hr, mi, sc, jd)
 

@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.0.2)
+cmake_minimum_required (VERSION 3.21)
 
 # Name the project slam, generating a library (in ./lib),
 # its testing environment (in ./tests) and documentation (in ./doc)
@@ -36,11 +36,11 @@ set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fPIC")
 MESSAGE("Found compiler: ${CMAKE_Fortran_COMPILER_ID}")
 if ("${CMAKE_Fortran_COMPILER_ID}" MATCHES "GNU")
     set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -cpp -ffree-line-length-none")
-    set (CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS} -g -O -Wuninitialized -fbounds-check -finit-local-zero")
+    set (CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS} -g -O -Wuninitialized -fbounds-check -finit-local-zero -Wall")
     set (CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS} -O3")
 elseif("${CMAKE_Fortran_COMPILER_ID}" MATCHES "Intel")
     set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpp")
-    set (CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS} -g -O -fno-omit-frame-pointer -traceback -check bounds -check output-conversion -check format -check pointers -check uninit -ftrapuv -assume realloc_lhs -fstack-protector -assume protect_parens")
+    set (CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS} -g -O -fno-omit-frame-pointer -traceback -check bounds -check output-conversion -check format -check pointers -ftrapuv -assume realloc_lhs -fstack-protector -assume protect_parens")
     set (CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS} -O3")
 elseif ("${CMAKE_Fortran_COMPILER_ID}" MATCHES "Flang")
     set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -Mpreprocess")
@@ -117,6 +117,18 @@ add_test(NAME test_fid_operations    COMMAND test_fid_operations    )
 add_test(NAME test_io_nxtbuf         COMMAND test_io_nxtbuf         )
 add_test(NAME test_io_parse_from_fid COMMAND test_io_parse_from_fid )
 add_test(NAME test_io_sprint         COMMAND test_io_sprint         )
+
+
+if (ENABLE_PFUNIT)
+	#Create test scenarios
+	find_package(PFUNIT REQUIRED)
+	#enable_testing()
+
+	if (PFUNIT_FOUND)
+	add_subdirectory(pFUnittests)
+	endif()
+endif()
+
 
 # Generate API documentation with Doxygen
 find_package(Doxygen)

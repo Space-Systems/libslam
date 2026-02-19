@@ -45,7 +45,6 @@ module slam_timer
   !** public methods
   public :: resetTimer
   public :: startTimer
-  public :: stopTimer
   public :: getElapsedTime
 
   interface getElapsedTime
@@ -74,6 +73,7 @@ contains
   subroutine startTimer(id)
 
     integer, intent(out)  :: id
+    integer :: i
 
     !** find available timer
     do i = 1, size(timerData)

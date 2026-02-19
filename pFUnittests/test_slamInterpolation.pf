@@ -1,0 +1,1214 @@
+!==============================================================================
+!
+!> @anchor  test_slamInterpolation
+!!
+!> @brief   Program for testing slam_interpolation
+!!
+!> @author  Alex Bush (AB)
+!!
+!> @date    <ul>
+!!            <li>21.07.2025 (initial design for cheby test)</li>
+!!          </ul>
+!!
+!! @details Program for testing Chebyshev polynomial coefficient generation
+!! Reference values : Mathematical definition + simulated ephemerides + public ephemerides
+!------------------------------------------------------------------------
+module test_slamInterpolation
+    use funit
+    use slam_interpolation
+    use iso_fortran_env
+    use slam_error_handling
+    use slam_types
+    use slam_math, only: pi
+
+    implicit none
+
+    contains
+    !=========================================================================
+    !
+    !> @anchor      compute_average_error
+    !!
+    !> @brief       Determines the average error between inputted ephemeris and interpolated value from Chebyshev polynomials
+    !> @author      Alex Bush
+    !!
+    !> @date        <ul>
+    !!                <li> 21.07.2025 (Added function to test_slamInterpolation)
+    !!              </ul>
+    !!
+    !> @param[in]   ephemerides_state_components  A matrix of state components to be converted to chebys
+    !> @param[in]   ephemerides_epochs            The respective epochs of each state vector component index
+    !> @param[in]   test_chebys                   Matrix of chebys for reconstruction. One for each state vector component
+    !> @param[in]   nephem                        Number of ephemerides
+    !> @param[in]   degree                        Chebyshev degree
+    !> @param[out]  avg_error:                    Average error per state vector component, index 7 is average of Euclidian distance
+    !!
+    !----------------------------------------------------------------------
+    subroutine compute_average_error(ephemerides_state_components, ephemerides_epochs, test_chebys, nephem, degree, avg_error)
+
+            implicit none
+
+            real(dp), intent(in), dimension(nephem, 6)   :: ephemerides_state_components ! input ephemerides matrix
+            real(dp), intent(in), dimension(nephem)      :: ephemerides_epochs !input ephemerides epochs
+            real(dp), intent(in), dimension(degree, 6)   :: test_chebys ! chebys to be used for ephemeris reconstruction
+            integer, intent(in)                          :: nephem, degree ! input parameters of number of ephemerides and chebyshev degree
+            real(dp), intent(out), dimension(7)          :: avg_error ! average error to be computed and output
+
+            real(dp), dimension(nephem, 6)               :: reconstructed_ephemerides ! ephemerides reconstructed from chebys
+            real(dp), dimension(nephem, 7)               :: error_array ! array to store difference between reconstructed values and original values
+            real(dp)                                     :: start_epoch, end_epoch, epoch_span ! working values for time normalization
+            real(dp)                                     :: state_component, epoch, poly  ! working values for state vector component reconstruction
+            real(dp), dimension(degree)                  :: cheby_values ! Value of chebyshev polynomial coefficients for given state vector component
+            integer                                      :: i, j, k ! iteration integers
+
+            ! Method is largely copied from slam_interpolation.
+            ! Normalization of ephemerides_epochs to span -1,1
+            ! First determine starting and ending epoch
+            start_epoch = ephemerides_epochs(1)
+            end_epoch = ephemerides_epochs(nephem)
+            ! Then determine span
+            epoch_span = end_epoch - start_epoch
+            do i = 1, 6
+                do j = 1, nephem
+                    ! Extract state component and epoch for value to be tested
+                    state_component  = ephemerides_state_components(j,i)
+                    epoch = ephemerides_epochs(j)
+                    ! normalise epoch to sit between -1,1
+                    epoch = epoch - start_epoch
+                    epoch = epoch / epoch_span
+                    epoch = epoch * 2
+                    epoch = epoch - 1
+                    ! interpolate cheby polynomial values for the epoch
+                    ! ultilising get_chebychev_polynomimal
+                    call get_chebyshev_polynomials(degree, epoch, cheby_values)
+                    ! sum values of chebyshev polynomials, multiplying by coefficient
+                    poly = 0.0
+                    do k = 1, degree
+                        poly = poly + (cheby_values(k) * test_chebys(k,i))
+                    end do
+                    ! store interpolated value
+                    reconstructed_ephemerides(j,i) = poly
+                end do
+            end do
+            ! For all ephmerides, find error
+            do i = 1, 6
+                do j = 1, nephem 
+                    error_array(j,i) = ephemerides_state_components(j,i) - reconstructed_ephemerides(j,i)
+                end do
+            end do
+            ! For all ephemerides positions (x,y,z) determine absolute error
+            do j = 1, nephem
+                error_array(j,7) = sqrt((ephemerides_state_components(j,1) - reconstructed_ephemerides(j,1)) ** 2 + &
+                (ephemerides_state_components(j,2) - reconstructed_ephemerides(j,2)) ** 2 + &
+                (ephemerides_state_components(j,3) - reconstructed_ephemerides(j,3)) ** 2)
+            end do
+            ! Initialise error matrix
+            avg_error = (/0.0,0.0,0.0,0.0,0.0,0.0,0.0/)
+            ! For all values of a specified state vector component, determine avg error
+            avg_error(:) = sum(error_array, dim=1)/nephem
+    end subroutine compute_average_error
+
+    !=========================================================================
+    !
+    !> @anchor      compute_chebys_and_error
+    !!
+    !> @brief       Creates Chebyshev polynomials for input state vector components prior to error computation
+    !> @author      Alex Bush
+    !!
+    !> @date        <ul>
+    !!                <li> 21.07.2025 (Added function to test_slamInterpolation)
+    !!              </ul>
+    !!
+    !> @param[in]   t_vals                        epochs of ephemerides
+    !> @param[in]   x_vals                        x value of ephemerides
+    !> @param[in]   y_vals                        y value of ephemerides
+    !> @param[in]   z_vals                        z value of ephemerides
+    !> @param[in]   vx_vals                       vx value of ephemerides
+    !> @param[in]   vy_vals                       vy value of ephemerides
+    !> @param[in]   vz_vals                       vz value of ephemerides
+    !> @param[in]   test_chebys                   Matirx of chebys for reconstruction. One for each state vector component
+    !> @param[in]   degree                        Chebyshev degree
+    !> @param[in]   nephem                        Number of ephemerides
+    !> @param[in]   n_lag                         Lagrange Degree
+    !> @param[out]  avg_error:                    Averge error per state vector component, index 7 is average of euclidian distance
+    !!
+    !----------------------------------------------------------------------
+    subroutine compute_chebys_and_error(degree, nephem, n_lag, t_vals, x_vals, y_vals, z_vals,&
+                                            vx_vals, vy_vals, vz_vals, avg_error)     
+
+        integer, intent(in)                     :: degree  ! Chebyshev polynomial degree
+        integer, intent(in)                     :: n_lag   ! Lagrange interpolation degree
+        integer, intent(in)                     :: nephem  ! Number of ephemerides points
+        real(dp), intent(in), dimension(nephem) :: t_vals, x_vals, y_vals, z_vals, vx_vals, vy_vals, vz_vals ! Input values for ephemeris state components
+        real(dp), intent(out), dimension(7)     :: avg_error ! output, average error between interpolated value and input value of ephemerides
+
+        real(dp), dimension(nephem, 6)          :: ephemerides_state_components ! matrix for ephemerides
+        real(dp), dimension(nephem)             :: ephemerides_epochs           ! epoch values for ephemerides
+        real(dp), dimension(degree, 6)          :: chebys ! chebyshevs to be calculated
+        real(dp), dimension(nephem, 2)          :: ephem  ! ephem to be passed to chebyshev interpolation
+        real(dp), dimension(degree)             :: coeff  ! chebyshev coefficients output from chebyshev interpolation
+        integer                                 :: i, j ! iteration integers
+
+        ! repack input values into ephemerides state components and epochs
+        ephemerides_epochs = t_vals
+        do j = 1, nephem
+            ephemerides_state_components(j,1) = x_vals(j)
+            ephemerides_state_components(j,2) = y_vals(j)
+            ephemerides_state_components(j,3) = z_vals(j)
+            ephemerides_state_components(j,4) = vx_vals(j)
+            ephemerides_state_components(j,5) = vy_vals(j)
+            ephemerides_state_components(j,6) = vz_vals(j)
+        end do
+        ! generation of chebys for each ephemeris state vector component
+        do i = 1, 6
+            ! reformat the ephemerides epoch and state component into input for chebyshev interpolation
+            ephem = reshape((/ephemerides_epochs, ephemerides_state_components(:,i)/), (/nephem, 2/))
+            call chebyshev_interpolation(degree, n_lag, nephem, ephem, coeff)
+            ! write output to local array
+            do j = 1, degree
+                chebys(j,i) = coeff(j)
+            end do
+        end do
+        ! call subroutine to compute average error from chebyshev interpolation
+        call compute_average_error(ephemerides_state_components, ephemerides_epochs, chebys, nephem, degree, avg_error)
+    end subroutine compute_chebys_and_error
+
+    @test
+    subroutine test_cheby_generation()
+
+        implicit none
+
+        ! Tests the slam_interpolation/chebyshev_generation subroutine
+        ! Uses Chebyshev polynomials as inputs to check validity
+        ! Reference Data : mathematical definition of chebyshev nodes
+
+        integer                     :: degree, n_lag, nephem
+        integer                     :: i
+        real(dp), dimension(72)     :: y_unit_zero, y_unit_one, t_unit, y_unit_n_minus_1, y_unit_n, y_unit_n_plus_1
+        real(dp), dimension(72, 2)  :: ephem
+        real(dp), dimension(36)     :: coeff, expected_zeros, expected
+
+        ! Initialize standard parameters
+        degree = 36
+        nephem = 72
+        n_lag = 5
+
+        ! Unit testing individual chebyshev polynomial encoding.
+        ! Initialize values for t, and y for chebyshev polynomials of order 0 and 1.
+        ! time, -1 to 1 inclusive, 72 steps
+        t_unit = (/-1.0,-0.971830985915493,-0.9436619718309859,-0.9154929577464789,&
+        -0.8873239436619719,-0.8591549295774648,-0.8309859154929577,-0.8028169014084507,&
+        -0.7746478873239436,-0.7464788732394366,-0.7183098591549295,-0.6901408450704225,&
+        -0.6619718309859155,-0.6338028169014085,-0.6056338028169014,-0.5774647887323944,&
+        -0.5492957746478873,-0.5211267605633803,-0.49295774647887325,-0.46478873239436613,&
+        -0.43661971830985913,-0.4084507042253521,-0.380281690140845,-0.352112676056338,&
+        -0.323943661971831,-0.2957746478873239,-0.2676056338028169,-0.23943661971830987,&
+        -0.21126760563380276,-0.18309859154929575,-0.15492957746478875,-0.12676056338028163,&
+        -0.09859154929577463,-0.07042253521126762,-0.04225352112676051,-0.014084507042253502,&
+        0.014084507042253502,0.04225352112676051,0.07042253521126773,0.09859154929577474,&
+        0.12676056338028174,0.15492957746478875,0.18309859154929575,0.21126760563380276,&
+        0.23943661971830998,0.267605633802817,0.295774647887324,0.323943661971831,&
+        0.352112676056338,0.380281690140845,0.40845070422535223,0.43661971830985924,&
+        0.46478873239436624,0.49295774647887325,0.5211267605633803,0.5492957746478873,&
+        0.5774647887323945,0.6056338028169015,0.6338028169014085,0.6619718309859155,&
+        0.6901408450704225,0.7183098591549295,0.7464788732394367,0.7746478873239437,&
+        0.8028169014084507,0.8309859154929577,0.8591549295774648,0.887323943661972,&
+        0.915492957746479,0.943661971830986,0.971830985915493,1.0/)
+        ! 0th order chebyshev polynomial y values. y = 1
+        y_unit_zero = (/1.0,1.0,1.0,1.0,&
+        1.0,1.0,1.0,1.0,&
+        1.0,1.0,1.0,1.0,&
+        1.0,1.0,1.0,1.0,&
+        1.0,1.0,1.0,1.0,&
+        1.0,1.0,1.0,1.0,&
+        1.0,1.0,1.0,1.0,&
+        1.0,1.0,1.0,1.0,&
+        1.0,1.0,1.0,1.0,&
+        1.0,1.0,1.0,1.0,&
+        1.0,1.0,1.0,1.0,&
+        1.0,1.0,1.0,1.0,&
+        1.0,1.0,1.0,1.0,&
+        1.0,1.0,1.0,1.0,&
+        1.0,1.0,1.0,1.0,&
+        1.0,1.0,1.0,1.0,&
+        1.0,1.0,1.0,1.0,&
+        1.0,1.0,1.0,1.0/)
+        ! 1st order chebyshev polynomial y values. y = t
+        y_unit_one = (/-1.0,-0.971830985915493,-0.9436619718309859,-0.9154929577464789,&
+        -0.8873239436619719,-0.8591549295774648,-0.8309859154929577,-0.8028169014084507,&
+        -0.7746478873239436,-0.7464788732394366,-0.7183098591549295,-0.6901408450704225,&
+        -0.6619718309859155,-0.6338028169014085,-0.6056338028169014,-0.5774647887323944,&
+        -0.5492957746478873,-0.5211267605633803,-0.49295774647887325,-0.46478873239436613,&
+        -0.43661971830985913,-0.4084507042253521,-0.380281690140845,-0.352112676056338,&
+        -0.323943661971831,-0.2957746478873239,-0.2676056338028169,-0.23943661971830987,&
+        -0.21126760563380276,-0.18309859154929575,-0.15492957746478875,-0.12676056338028163,&
+        -0.09859154929577463,-0.07042253521126762,-0.04225352112676051,-0.014084507042253502,&
+        0.014084507042253502,0.04225352112676051,0.07042253521126773,0.09859154929577474,&
+        0.12676056338028174,0.15492957746478875,0.18309859154929575,0.21126760563380276,&
+        0.23943661971830998,0.267605633802817,0.295774647887324,0.323943661971831,&
+        0.352112676056338,0.380281690140845,0.40845070422535223,0.43661971830985924,&
+        0.46478873239436624,0.49295774647887325,0.5211267605633803,0.5492957746478873,&
+        0.5774647887323945,0.6056338028169015,0.6338028169014085,0.6619718309859155,&
+        0.6901408450704225,0.7183098591549295,0.7464788732394367,0.7746478873239437,&
+        0.8028169014084507,0.8309859154929577,0.8591549295774648,0.887323943661972,&
+        0.915492957746479,0.943661971830986,0.971830985915493,1.0/)
+        ! Initialize an array of 0s, to be changed to include 1.0 for respective polynomial degree
+        ! e.g. when checking 4th order polynomial, index 4 to be replaced with 1.0.
+        expected_zeros = (/0.0,0.0,0.0,0.0,&
+        0.0,0.0,0.0,0.0,&
+        0.0,0.0,0.0,0.0,&
+        0.0,0.0,0.0,0.0,&
+        0.0,0.0,0.0,0.0,&
+        0.0,0.0,0.0,0.0,&
+        0.0,0.0,0.0,0.0,&
+        0.0,0.0,0.0,0.0,&
+        0.0,0.0,0.0,0.0/)
+        ! TESTING first 8 coefficients one at a time utilizing recurrence relation.
+        ! First 2 must be checked manually, prior to recurrence relation.
+        ephem = reshape((/t_unit, y_unit_zero/), (/nephem, 2/))
+        ! Call the chebyshev_interpolation subroutine
+        call chebyshev_interpolation(degree, n_lag, nephem, ephem, coeff)
+        ! Initisalize expected array, initially full of zeros
+        expected = expected_zeros
+        ! Replace Order's index with 1.0
+        expected(1) = 1.0
+        ! Check if the computed polynomial coefficients are equal to expected value
+        !(all zeros apart from coefficient 0)
+        @assertEqual(expected, coeff, tolerance = 0.00001)
+        ! Coefficient 1, y = x
+        ! time is between -1 and 1
+        ephem = reshape((/t_unit, y_unit_one/), (/nephem, 2/))
+        ! Call the chebyshev_interpolation subroutine
+        call chebyshev_interpolation(degree, n_lag, nephem, ephem, coeff)
+        expected = expected_zeros
+        expected(2) = 1.0
+        ! Check if the computed polynomial coefficients are equal to expected value 
+        ! (all zeros, apart from coefficient 1)
+        @assertEqual(expected, coeff, tolerance = 0.00001)
+        ! Assigning the first two polynomials as n-1 and n respectively
+        ! In preparation for the recursive generation of higher orders
+        y_unit_n_minus_1 = y_unit_zero
+        y_unit_n = y_unit_one
+        ! Begin recurrence relation to calculate order n+1 from n and n-1.
+        do i = 3, 9
+            ! Calculate the n+1 polynomial using the recurrence relation
+            y_unit_n_plus_1 = (2 * y_unit_one)
+            y_unit_n_plus_1 = y_unit_n_plus_1 * y_unit_n
+            y_unit_n_plus_1 = y_unit_n_plus_1 - y_unit_n_minus_1
+            ! Sets ephem to n+1 polynomial, and runs chebyshev interpolation to generate coefficients
+            ephem = reshape((/t_unit, y_unit_n_plus_1/), (/nephem, 2/))
+            call chebyshev_interpolation(degree, n_lag, nephem, ephem, coeff)
+            ! Reset the expected value matrix to zeros, and update index of polynomial to be matched
+            expected = expected_zeros
+            expected(i) = 1.0
+            ! Tests error
+            @assertEqual(expected, coeff, tolerance = 0.00001)
+            ! Assign n polynomial to become new n-1 
+            y_unit_n_minus_1 = y_unit_n
+            ! Assign n+1 polynomial to become new n
+            y_unit_n = y_unit_n_plus_1
+            ! repeat the recurrence relation
+        end do
+        ! Test is ended after order 8 due to only having 72 input values per polynomial.
+    end subroutine test_cheby_generation
+
+    !=========================================================================
+    !
+    !> @anchor      test_simulated_GEO_cheby_generation
+    !!
+    !> @brief       Tests the average error from chebyshev generation and interpolation for simulated GEO
+    !> @author      Alex Bush
+    !!
+    !> @date        <ul>
+    !!                <li> 21.07.2025 (Added function to test_slamInterpolation)
+    !!              </ul>
+    !!
+    !----------------------------------------------------------------------
+    @test
+    subroutine test_simulated_GEO_cheby_generation()
+
+        implicit none
+        ! Tests the slam_interpolation/chebyshev_generation subroutine
+        ! Uses Known trajectories and chebys to test generation
+        ! Compares generation against original values to calculate error
+
+        ! Reference Data : simulated ephemerides
+        integer                  :: degree, n_lag, nephem
+        real(dp), dimension(50)  :: t_vals, x_vals, y_vals, z_vals, vx_vals, vy_vals, vz_vals
+        real(dp), dimension(7)   :: avg_error
+        ! initialization of test data
+        degree = 36
+        nephem = 50
+        n_lag = 5
+        ! initialise ephemeris data 1 orbit of GEO orbit
+
+        t_vals = (/0.000000,1706.038697,3412.077394,5118.116091,6824.154788,&
+                8530.193485,10236.232181,11942.270878,13648.309575,15354.348272,&
+                17060.386969,18766.425666,20472.464363,22178.503060,23884.541757,&
+                25590.580454,27296.619150,29002.657847,30708.696544,32414.735241,&
+                34120.773938,35826.812635,37532.851332,39238.890029,40944.928726,&
+                42650.967423,44357.006119,46063.044816,47769.083513,49475.122210,&
+                51181.160907,52887.199604,54593.238301,56299.276998,58005.315695,&
+                59711.354392,61417.393088,63123.431785,64829.470482,66535.509179,&
+                68241.547876,69947.586573,71653.625270,73359.663967,75065.702664,&
+                76771.741361,78477.780057,80183.818754,81889.857451,83595.896148/)
+
+        x_vals = (/42164.000000,41838.131998,40865.564987,39261.332098,37050.230228,&
+                34266.436749,30952.981222,27161.080284,22949.345981,18382.879798,&
+                13532.266364,8472.482424,3281.737906,-1959.732985,-7170.911955,&
+                -12271.248938,-17181.907173,-21826.981793,-26134.673103,-30038.396396,&
+                -33477.811169,-36399.753811,-38759.059367,-40519.259655,-41653.146965,&
+                -42143.194611,-41981.827845,-41171.540939,-39724.858635,-37664.142542,&
+                -35021.245494,-31837.019193,-28160.682758,-24049.061936,-19565.710739,&
+                -14779.929077,-9765.691577,-4600.504148,635.794044,5862.264661,&
+                10998.121271,15963.978081,20683.077009,25082.474155,29094.167299,&
+                32656.147030,35713.355231,38218.536123,40132.966706,41427.055305/)
+
+        y_vals = (/0.000000,5231.979258,10383.086936,15373.701502,20126.682191,&
+                24568.561385,28630.680213,32250.249826,35371.321929,37945.653590,&
+                39933.452932,41303.994208,42036.092734,42118.432338,41549.740285,&
+                40338.806942,38504.349909,36074.724695,33087.486423,29588.809337,&
+                25632.773072,21280.526744,16599.343752,11661.581926,6543.565076,&
+                1324.403246,-3915.230107,-9094.345093,-14132.887265,-18952.975033,&
+                -23480.103494,-27644.296065,-31381.186125,-34633.011939,-37349.509492,&
+                -39488.689425,-41017.486076,-41912.268581,-42159.206135,-41754.481784,&
+                -40704.351420,-39025.047083,-36742.526062,-33892.069667,-30517.737878,&
+                -26671.688307,-22413.369986,-17808.604454,-12928.568342,-7848.693186/)
+
+        z_vals = (/0.000000,0.000000,0.000000,0.000000,0.000000,&
+                0.000000,0.000000,0.000000,0.000000,0.000000,&
+                0.000000,0.000000,0.000000,0.000000,0.000000,&
+                0.000000,0.000000,0.000000,0.000000,0.000000,&
+                0.000000,0.000000,0.000000,0.000000,0.000000,&
+                0.000000,0.000000,0.000000,0.000000,0.000000,&
+                0.000000,0.000000,0.000000,0.000000,0.000000,&
+                0.000000,0.000000,0.000000,0.000000,0.000000,&
+                0.000000,0.000000,0.000000,0.000000,0.000000,&
+                0.000000,0.000000,0.000000,0.000000,0.000000/)
+
+        vx_vals = (/0.000000,-0.381524,-0.757151,-1.121075,-1.467670,&
+            -1.791579,-2.087795,-2.351740,-2.579333,-2.767058,&
+            -2.912011,-3.011953,-3.065339,-3.071343,-3.029873,&
+            -2.941570,-2.807799,-2.630627,-2.412792,-2.157663,&
+            -1.869183,-1.551810,-1.210451,-0.850381,-0.477167,&
+            -0.096578,0.285505,0.663174,1.030593,1.382081,&
+            1.712207,2.015866,2.288366,2.525495,2.723586,&
+            2.879578,2.991061,3.056310,3.074317,3.044804,&
+            2.968226,2.845769,2.679324,2.471464,2.225402,&
+            1.944942,1.634419,1.298632,0.942772,0.572339/)
+
+        vy_vals = (/3.074666,3.050903,2.979982,2.862999,2.701762,&
+            2.498763,2.257141,1.980629,1.673503,1.340509,&
+            0.986794,0.617827,0.239310,-0.142907,-0.522914,&
+            -0.894839,-1.252932,-1.591658,-1.905782,-2.190448,&
+            -2.441256,-2.654328,-2.826373,-2.954729,-3.037414,&
+            -3.073149,-3.061382,-3.002295,-2.896800,-2.746529,&
+            -2.553805,-2.321606,-2.053522,-1.753696,-1.426763,&
+            -1.077776,-0.712130,-0.335476,0.046363,0.427486,&
+            0.802001,1.164119,1.508243,1.829054,2.121593,&
+            2.381338,2.604275,2.786957,2.926560,3.020927/)
+
+        vz_vals = 0.0_dp
+
+        ! call function to validate the ephemerides
+        call compute_chebys_and_error(degree, nephem, n_lag, t_vals, x_vals, y_vals, z_vals,&
+                                          vx_vals, vy_vals, vz_vals, avg_error)
+        ! Check avg error is within 0.05km (50m)
+        @assertEqual(0.0_dp, avg_error(7), tolerance = 0.05_dp)
+
+    end subroutine test_simulated_GEO_cheby_generation
+
+    !=========================================================================
+    !
+    !> @anchor      test_simulated_LEO_cheby_generation
+    !!
+    !> @brief       Tests the average error from chebyshev generation and interpolation for simulated LEO
+    !> @author      Alex Bush
+    !!
+    !> @date        <ul>
+    !!                <li> 21.07.2025 (Added function to test_slamInterpolation)
+    !!              </ul>
+    !!
+    !----------------------------------------------------------------------
+    @test
+    subroutine test_simulated_LEO_cheby_generation()
+
+        implicit none
+        ! Tests the slam_interpolation/chebyshev_generation subroutine
+        ! Uses Known trajectories and chebys to test generation
+        ! Compares generation against original values to calculate error
+
+        ! Reference Data : simulated ephemerides
+        integer                  :: degree, n_lag, nephem
+        real(dp), dimension(50)  :: t_vals, x_vals, y_vals, z_vals, vx_vals, vy_vals, vz_vals
+        real(dp), dimension(7)   :: avg_error
+        ! initialization of test data
+        degree = 36
+        nephem = 50
+        n_lag = 5
+        ! initialise ephemeris data 1 orbit of a SSO
+
+        t_vals = (/0.000000,113.874797,227.749593,341.624390,455.499186,&
+            569.373983,683.248779,797.123576,910.998372,1024.873169,&
+            1138.747965,1252.622762,1366.497558,1480.372355,1594.247152,&
+            1708.121948,1821.996745,1935.871541,2049.746338,2163.621134,&
+            2277.495931,2391.370727,2505.245524,2619.120320,2732.995117,&
+            2846.869913,2960.744710,3074.619506,3188.494303,3302.369100,&
+            3416.243896,3530.118693,3643.993489,3757.868286,3871.743082,&
+            3985.617879,4099.492675,4213.367472,4327.242268,4441.117065,&
+            4554.991861,4668.866658,4782.741455,4896.616251,5010.491048,&
+            5124.365844,5238.240641,5352.115437,5465.990234,5579.865030/)
+
+        x_vals = (/6938.000000,6884.379086,6724.345173,6460.371931,6096.539639,&
+            5638.472113,5093.249780,4469.300233,3776.267964,3024.865289,&
+            2226.706765,1394.129662,540.003263,-322.470056,-1179.958902,&
+            -2019.208925,-2827.247699,-3591.585231,-4300.407029,-4942.756716,&
+            -5508.705386,-5989.505074,-6377.723980,-6667.361339,-6853.940177,&
+            -6934.576516,-6908.023944,-6774.692891,-6536.644275,-6197.557655,&
+            -5762.674349,-5238.716421,-4633.782776,-3957.223976,-3219.497702,&
+            -2432.007113,-1606.924584,-757.003552,104.618610,964.623665,&
+            1809.718371,2626.839956,3403.358037,4127.269844,4787.385749,&
+            5373.502232,5876.559591,6288.781985,6603.797624,6816.737257/)
+
+        y_vals = (/0.000000,-115.350247,-228.917505,-338.946347,-443.736039,&
+            -541.666829,-631.224984,-711.026189,-779.836942,-836.593626,&
+            -880.418942,-910.635475,-926.776163,-928.591517,-916.053477,&
+            -889.355844,-848.911289,-795.344971,-729.484872,-652.349003,&
+            -565.129667,-469.175027,-365.968270,-257.104680,-144.266980,&
+            -29.199321,86.319677,200.504417,311.589926,417.859138,&
+            517.669432,609.478022,691.865808,763.559309,823.450346,&
+            870.613173,904.318787,924.046193,929.490463,920.567444,&
+            897.415059,860.391180,810.068090,747.223642,672.829233,&
+            588.034790,494.150995,392.629025,285.038123,173.041339/)
+
+        z_vals = (/0.000000,853.148824,1693.110383,2506.901252,3281.942529,&
+            4006.254270,4668.640669,5258.863108,5767.798420,6187.579906,&
+            6511.718934,6735.205232,6854.584336,6868.010983,6775.277634,&
+            6577.817685,6278.683307,5882.498271,5395.386474,4824.877285,&
+            4179.789161,3470.093336,2706.759698,1901.587222,1067.021594,&
+            215.962835,-638.434098,-1482.962649,-2304.568797,-3090.552840,&
+            -3828.765690,-4507.796669,-5117.149879,-5647.406448,-6090.370110,&
+            -6439.193902,-6688.485996,-6834.393042,-6874.659732,-6808.663655,&
+            -6637.424925,-6363.590406,-5991.392806,-5526.585245,-4976.352330,&
+            -4349.199105,-3654.819581,-2903.946899,-2108.187424,-1279.841343/)
+
+        vx_vals = (/0.000000,-0.940537,-1.866536,-2.763684,-3.618113,&
+            -4.416616,-5.146851,-5.797530,-6.358596,-6.821376,&
+            -7.178716,-7.425095,-7.556702,-7.571504,-7.469272,&
+            -7.251586,-6.921811,-6.485045,-5.948038,-5.319091,&
+            -4.607926,-3.825536,-2.984014,-2.096367,-1.176317,&
+            -0.238084,0.703829,1.634863,2.540627,3.407119,&
+            4.220947,4.969532,5.641301,6.225872,6.714209,&
+            7.098763,7.373590,7.534442,7.578833,7.506077,&
+            7.317299,7.015415,6.605093,6.092675,5.486082,&
+            4.794689,4.029184,3.201399,2.324130,1.410936/)
+
+        vy_vals = (/-1.015574,-1.007725,-0.984300,-0.945660,-0.892403,&
+            -0.825351,-0.745543,-0.654210,-0.552765,-0.442775,&
+            -0.325942,-0.204071,-0.079045,0.047203,0.172721,&
+            0.295569,0.413848,0.525731,0.629487,0.723514,&
+            0.806356,0.876735,0.933562,0.975959,1.003270,&
+            1.015073,1.011187,0.991670,0.956825,0.907190,&
+            0.843532,0.766836,0.678286,0.579253,0.471265,&
+            0.355994,0.235219,0.110809,-0.015314,-0.141200,&
+            -0.264904,-0.384513,-0.498179,-0.604144,-0.700771,&
+            -0.786566,-0.860202,-0.920543,-0.966654,-0.997824/)
+
+        vz_vals = (/7.511351,7.453298,7.280039,6.994252,6.600353,&
+            6.104431,5.514152,4.838640,4.088336,3.274838,&
+            2.410720,1.509339,0.584629,-0.349119,-1.277470,&
+            -2.186075,-3.060889,-3.888391,-4.655789,-5.351222,&
+            -5.963940,-6.484473,-6.904774,-7.218347,-7.420344,&
+            -7.507644,-7.478897,-7.334548,-7.076827,-6.709719,&
+            -6.238897,-5.671640,-5.016715,-4.284246,-3.485554,&
+            -2.632986,-1.739720,-0.819562,0.113264,1.044339,&
+            1.959272,2.843920,3.684609,4.468344,5.183011,&
+            5.817564,6.362194,6.808482,7.149530,7.380067/)
+
+        ! call function to validate the ephemerides
+        call compute_chebys_and_error(degree, nephem, n_lag, t_vals, x_vals, y_vals, z_vals,&
+                                            vx_vals, vy_vals, vz_vals, avg_error)           
+        ! Check avg error is within 0.05km (50m)
+        @assertEqual(0.0_dp, avg_error(7), tolerance = 0.05_dp)
+
+    end subroutine test_simulated_LEO_cheby_generation
+
+    !=========================================================================
+    !
+    !> @anchor      test_simulated_GTO_cheby_generation
+    !!
+    !> @brief       Tests the average error from chebyshev generation and interpolation for simulated GTO
+    !> @author      Alex Bush
+    !!
+    !> @date        <ul>
+    !!                <li> 21.07.2025 (Added function to test_slamInterpolation)
+    !!              </ul>
+    !!
+    !----------------------------------------------------------------------
+    @test 
+    subroutine test_simulated_GTO_cheby_generation()
+
+        implicit none
+        ! Tests the slam_interpolation/chebyshev_generation subroutine
+        ! Uses Known trajectories and chebys to test generation
+        ! Compares generation against original values to calculate error
+
+        ! Reference Data : simulated ephemerides
+        integer                  :: degree, n_lag, nephem
+        real(dp), dimension(50)  :: t_vals, x_vals, y_vals, z_vals, vx_vals, vy_vals, vz_vals
+        real(dp), dimension(7)   :: avg_error
+        ! initialization of test data
+        degree = 36
+        nephem = 50
+        n_lag = 5
+        ! initialise ephemeris data 1 orbit of a GTO
+
+        t_vals = (/0.000000,750.690018,1501.380037,2252.070055,3002.760073,&
+            3753.450092,4504.140110,5254.830128,6005.520147,6756.210165,&
+            7506.900183,8257.590202,9008.280220,9758.970239,10509.660257,&
+            11260.350275,12011.040294,12761.730312,13512.420330,14263.110349,&
+            15013.800367,15764.490385,16515.180404,17265.870422,18016.560440,&
+            18767.250459,19517.940477,20268.630495,21019.320514,21770.010532,&
+            22520.700550,23271.390569,24022.080587,24772.770605,25523.460624,&
+            26274.150642,27024.840661,27775.530679,28526.220697,29276.910716,&
+            30027.600734,30778.290752,31528.980771,32279.670789,33030.360807,&
+            33781.050826,34531.740844,35282.430862,36033.120881,36783.810899/)
+
+            x_vals = (/6621.000000,4456.717411,238.884647,-4126.058064,-8206.189989,&
+            -11942.406562,-15351.240408,-18462.325623,-21304.300664,-23901.896192,&
+            -26275.816029,-28443.270268,-30418.581039,-32213.712429,-33838.700290,&
+            -35301.991811,-36610.711675,-37770.870515,-38787.528506,-39664.924010,&
+            -40406.574781,-41015.357392,-41493.569063,-41842.975025,-42064.843698,&
+            -42159.971315,-42128.697101,-41970.909675,-41686.044951,-41273.075454,&
+            -40730.490570,-40056.266871,-39247.827146,-38301.986208,-37214.880809,&
+            -35981.880039,-34597.471348,-33055.115679,-31347.063089,-29464.117522,&
+            -27395.336432,-25127.648530,-22645.374568,-19929.652520,-16957.834182,&
+            -13703.149911,-10135.745744,-6229.251616,-1990.110868,2408.234156/)
+
+            y_vals = (/0.000000,6880.545032,11268.248309,13849.359406,15370.062940,&
+            16224.222746,16625.867337,16701.614463,16532.149870,16172.034383,&
+            15659.952688,15024.408739,14287.086424,13464.934514,12571.515981,&
+            11617.913342,10613.355449,9565.663674,8481.577614,7366.998521,&
+            6227.175436,5066.850800,3890.377154,2701.813137,1505.004827,&
+            303.656964,-898.602304,-2098.160097,-3291.358169,-4474.430245,&
+            -5643.434478,-6794.177719,-7922.127574,-9022.307022,-10089.164611,&
+            -11116.410513,-12096.804549,-13021.875832,-13881.543304,-14663.589548,&
+            -15352.911637,-15930.422707,-16371.386475,-16642.791652,-16699.018322,&
+            -16474.282588,-15868.572353,-14719.379497,-12740.248861,-9386.252751/)
+
+            z_vals = 0.0_dp
+
+            vx_vals = (/0.000000,-4.953234,-5.900201,-5.655858,-5.205988,&
+            -4.752776,-4.335905,-3.959101,-3.618022,-3.307116,&
+            -3.021325,-2.756408,-2.508892,-2.275945,-2.055242,&
+            -1.844859,-1.643184,-1.448850,-1.260685,-1.077665,&
+            -0.898889,-0.723548,-0.550902,-0.380271,-0.211011,&
+            -0.042505,0.125851,0.294654,0.464515,0.636060,&
+            0.809951,0.986897,1.167667,1.353113,1.544195,&
+            1.742005,1.947806,2.163078,2.389578,2.629416,&
+            2.885154,3.159923,3.457563,3.782724,4.140797,&
+            4.537119,4.973551,5.434871,5.830818,5.716375/)
+
+            vy_vals = (/10.201167,7.507986,4.424723,2.614624,1.520125,&
+        0.801193,0.296149,-0.076835,-0.362755,-0.588201,&
+        -0.769838,-0.918619,-1.042033,-1.145365,-1.232447,&
+        -1.306116,-1.368513,-1.421273,-1.465660,-1.502657,&
+        -1.533027,-1.557363,-1.576117,-1.589622,-1.598112,&
+        -1.601733,-1.600544,-1.594526,-1.583576,-1.567509,&
+        -1.546041,-1.518783,-1.485217,-1.444670,-1.396277,&
+        -1.338926,-1.271182,-1.191180,-1.096463,-0.983747,&
+        -0.848554,-0.684625,-0.482961,-0.230151,0.094666,&
+        0.525708,1.122880,1.999599,3.388828,5.766293/)
+
+        vz_vals = 0.0_dp
+
+        ! call function to validate the ephemerides
+        call compute_chebys_and_error(degree, nephem, n_lag, t_vals, x_vals, y_vals, z_vals,&
+                                            vx_vals, vy_vals, vz_vals, avg_error)
+        !  Use large error value due to being a GTO
+        @AssertLessThanOrEqual(avg_error(7),0.3_dp)
+
+    end subroutine test_simulated_GTO_cheby_generation
+
+    !=========================================================================
+    !
+    !> @anchor      test_simulated_half_GTO_cheby_generation
+    !!
+    !> @brief       Tests the average error from chebyshev generation and interpolation for half of a simulated GTO
+    !> @author      Alex Bush
+    !!
+    !> @date        <ul>
+    !!                <li> 21.07.2025 (Added function to test_slamInterpolation)
+    !!              </ul>
+    !!
+    !----------------------------------------------------------------------
+    @test
+    subroutine test_simulated_half_GTO_cheby_generation()
+
+        implicit none
+        ! Tests the slam_interpolation/chebyshev_generation subroutine
+        ! Uses Known trajectories and chebys to test generation
+        ! Compares generation against original values to calculate error
+
+        ! Reference Data : simulated ephemerides
+        integer                  :: degree, n_lag, nephem
+        real(dp), dimension(50)  :: t_vals, x_vals, y_vals, z_vals, vx_vals, vy_vals, vz_vals
+        real(dp), dimension(7)   :: avg_error
+        ! initialization of test data
+        degree = 36
+        nephem = 50
+        n_lag = 5
+        ! initialise ephemeris data 1/2 orbit of a GTO
+
+        t_vals = (/0.000000,379.136373,758.272746,1137.409119,1516.545492,&
+            1895.681865,2274.818237,2653.954610,3033.090983,3412.227356,&
+            3791.363729,4170.500102,4549.636475,4928.772848,5307.909221,&
+            5687.045594,6066.181966,6445.318339,6824.454712,7203.591085,&
+            7582.727458,7961.863831,8341.000204,8720.136577,9099.272950,&
+            9478.409323,9857.545695,10236.682068,10615.818441,10994.954814,&
+            11374.091187,11753.227560,12132.363933,12511.500306,12890.636679,&
+            13269.773052,13648.909425,14028.045797,14407.182170,14786.318543,&
+            15165.454916,15544.591289,15923.727662,16302.864035,16682.000408,&
+            17061.136781,17440.273154,17819.409526,18198.545899,18577.682272/)
+
+        x_vals = (/6621.000000,5999.027698,4419.066253,2364.858393,149.398763,&
+            -2078.494910,-4254.577006,-6352.727562,-8363.807939,-10286.319940,&
+            -12122.183762,-13874.770287,-15547.962930,-17145.707525,-18671.800828,&
+            -20129.798243,-21522.981643,-22854.357268,-24126.668096,-25342.412585,&
+            -26503.865490,-27613.098607,-28672.000362,-29682.293790,-30645.552764,&
+            -31563.216499,-32436.602438,-33266.917664,-34055.268994,-34802.671887,&
+            -35510.058329,-36178.283789,-36808.133381,-37400.327311,-37955.525706,&
+            -38474.332889,-38957.301171,-39404.934206,-39817.689966,-40195.983372,&
+            -40540.188616,-40850.641206,-41127.639760,-41371.447571,-41582.293960,&
+            -41760.375438,-41905.856686,-42018.871366,-42099.522776,-42147.884348/)
+
+        y_vals = (/0.000000,3749.028960,6937.333011,9429.858971,11334.991863,&
+            12791.370603,13908.366416,14764.496656,15415.639907,15902.196727,&
+            16254.033735,16493.737035,16638.752725,16702.817124,16696.932128,&
+            16630.044695,16509.530088,16341.542237,16131.272336,15883.142831,&
+            15600.955150,15288.003732,14947.165160,14580.968636,14191.652289,&
+            13781.208616,13351.421475,12903.896464,12440.086060,11961.310577,&
+            11468.775768,10963.587693,10446.765368,9919.251594,9381.922266,&
+            8835.594450,8281.033396,7718.958700,7150.049714,6574.950351,&
+            5994.273363,5408.604176,4818.504358,4224.514769,3627.158446,&
+            3026.943268,2424.364433,1819.906790,1214.047047,607.255884/)
+
+        z_vals = 0._dp
+
+        vx_vals = (/0.000000,-3.127585,-4.977460,-5.724264,-5.901014,&
+            -5.825125,-5.643390,-5.421018,-5.187237,-4.955220,&
+            -4.730752,-4.516125,-4.311955,-4.118055,-3.933875,&
+            -3.758718,-3.591850,-3.432557,-3.280167,-3.134063,&
+            -2.993682,-2.858515,-2.728104,-2.602034,-2.479931,&
+            -2.361459,-2.246311,-2.134210,-2.024905,-1.918165,&
+            -1.813779,-1.711554,-1.611312,-1.512888,-1.416130,&
+            -1.320896,-1.227054,-1.134478,-1.043052,-0.952666,&
+            -0.863215,-0.774599,-0.686724,-0.599498,-0.512834,&
+            -0.426645,-0.340849,-0.255365,-0.170115,-0.085019/)
+
+        vy_vals = (/10.201167,9.304261,7.470272,5.735194,4.377417,&
+            3.353104,2.573324,1.967136,1.485287,1.094361,&
+            0.771467,0.500610,0.270365,0.072391,-0.099523,&
+            -0.250091,-0.382947,-0.500940,-0.606327,-0.700926,&
+            -0.786211,-0.863392,-0.933472,-0.997287,-1.055540,&
+            -1.108828,-1.157658,-1.202465,-1.243624,-1.281458,&
+            -1.316250,-1.348244,-1.377656,-1.404672,-1.429460,&
+            -1.452163,-1.472911,-1.491817,-1.508979,-1.524485,&
+            -1.538414,-1.550831,-1.561795,-1.571357,-1.579562,&
+            -1.586444,-1.592035,-1.596359,-1.599434,-1.601274/)
+
+        vz_vals =0.0_dp
+
+        ! call function to validate the ephemerides and (optional) chebys
+        call compute_chebys_and_error(degree, nephem, n_lag, t_vals, x_vals, y_vals, z_vals,&
+                                            vx_vals, vy_vals, vz_vals, avg_error)
+        ! Check avg error is within 0.05km (50m)
+        @assertEqual(0.0_dp, avg_error(7), tolerance = 0.05_dp)
+
+    end subroutine test_simulated_half_GTO_cheby_generation
+
+    !=========================================================================
+    !
+    !> @anchor      test_real_LEO_cheby_generation
+    !!
+    !> @brief       Tests the average error from chebyshev generation and interpolation for a real LEO
+    !> @author      Alex Bush
+    !!
+    !> @date        <ul>
+    !!                <li> 21.07.2025 (Added function to test_slamInterpolation)
+    !!              </ul>
+    !!
+    !----------------------------------------------------------------------
+    @test
+    subroutine test_real_LEO_cheby_generation()
+
+        !  Selected data range: 2025-07-15T12:23:45.998Z → 2025-07-15T13:55:45.998Z
+        !  ASTROCAST-103
+        implicit none
+        ! Tests the slam_interpolation/chebyshev_generation subroutine
+        ! Uses Known trajectories and chebys to test generation
+        ! Compares generation against original values to calculate error
+
+        ! Reference Data : oem database
+        integer                  :: degree, n_lag, nephem
+        real(dp), dimension(93)  :: t_vals, x_vals, y_vals, z_vals, vx_vals, vy_vals, vz_vals
+        real(dp), dimension(7)   :: avg_error
+        ! initialization of test data
+        degree = 36
+        nephem = 93
+        n_lag = 5
+        ! initialise ephemeris data from database
+
+            t_vals   = (/ 0.0, 60.0, 120.0, 180.0, 240.0,&
+            300.0, 360.0, 420.0, 480.0, 540.0,&
+            600.0, 660.0, 720.0, 780.0, 840.0,&
+            900.0, 960.0, 1020.0, 1080.0, 1140.0,&
+            1200.0, 1260.0, 1320.0, 1380.0, 1440.0,&
+            1500.0, 1560.0, 1620.0, 1680.0, 1740.0,&
+            1800.0, 1860.0, 1920.0, 1980.0, 2040.0,&
+            2100.0, 2160.0, 2220.0, 2280.0, 2340.0,&
+            2400.0, 2460.0, 2520.0, 2580.0, 2640.0,&
+            2700.0, 2760.0, 2820.0, 2880.0, 2940.0,&
+            3000.0, 3060.0, 3120.0, 3180.0, 3240.0,&
+            3300.0, 3360.0, 3420.0, 3480.0, 3540.0,&
+            3600.0, 3660.0, 3720.0, 3780.0, 3840.0,&
+            3900.0, 3960.0, 4020.0, 4080.0, 4140.0,&
+            4200.0, 4260.0, 4320.0, 4380.0, 4440.0,&
+            4500.0, 4560.0, 4620.0, 4680.0, 4740.0,&
+            4800.0, 4860.0, 4920.0, 4980.0, 5040.0,&
+            5100.0, 5160.0, 5220.0, 5280.0, 5340.0,&
+            5400.0, 5460.0, 5520.0 /)
+
+        x_vals  = (/ -581.4883170936755, -455.4773196962564, -327.39413459307536, -197.82141832512403, -67.34876743383572,&
+            63.42992138329106, 193.91915256364646, 323.5245009454158, 451.65525319017445, 577.7270989684217,&
+            701.164834828239, 821.4049870791983, 937.8984373736134, 1050.1130027753402, 1157.5359392836533,&
+            1259.6763592306413, 1356.06752161331, 1446.2690267049625, 1529.8689038838343, 1606.485596200687,&
+            1675.7698225642546, 1737.40616437254, 1791.1145010286314, 1836.6513723492321, 1873.8111006747674,&
+            1902.426706071034, 1922.3706339999544, 1933.5553040254815, 1935.9333825094543, 1929.4978701931066,&
+            1914.282107835266, 1890.359553598132, 1857.8433368457052, 1816.8855708049593, 1767.6764862259674,&
+            1710.4434090290276, 1645.4497058208926, 1572.9935095942192, 1493.4063509177656, 1407.051616606087,&
+            1314.322857132757, 1215.6419779012592, 1111.4573056979652, 1002.2415271602696, 888.4895784012759,&
+            770.7165148267113, 649.4552960456292, 525.2545367771597, 398.6761333207408, 270.2927250207842,&
+            140.68521376768354, 10.44036487019188, -119.85176404643563, -249.60049183347, -378.21712420652415,&
+            -505.117552773319, -629.7248783171311, -751.4720349260248, -869.8043779829368, -984.1822412954771,&
+            -1094.0834350630914, -1199.0056458579081, -1298.4687957188019, -1392.017316648883, -1479.2223455483024,&
+            -1559.6838816371462, -1633.0328052905218, -1698.932485615251, -1757.0803689208499, -1807.2095465672876,&
+            -1849.0899835090618, -1882.5296976624993, -1907.3757420665822, -1923.5148610573417, -1930.873963142809,&
+            -1929.4204103248646, -1919.1621396103826, -1900.1475414803463, -1872.4651307557208, -1836.243088865017,&
+            -1791.648690281299, -1738.8874376265974, -1678.2020035346059, -1609.871013737789, -1534.2076849505506,&
+            -1451.5583518698597, -1362.3008210642265, -1266.842680951607, -1165.6194350601056, -1059.092469971498,&
+            -947.7469865413706, -832.0898923164455, -712.6475814812727 /)
+
+        y_vals      = (/ 1079.822115151392, 1515.0682180316155, 1943.420800585655, 2362.929540384556, 2771.683437953355,&
+            3167.819504373793, 3549.5312322039863, 3915.0767445644406, 4262.786745542611, 4591.072276738612,&
+            4898.43208917842, 5183.459654393587, 5444.849857876441, 5681.405167365042, 5892.0414016168625,&
+            6075.793035740339, 6231.817883385876, 6359.401161809126, 6457.958975064257, 6527.041196526832,&
+            6566.333599141489, 6575.659233676765, 6554.979396931292, 6504.393929998854, 6424.140560582537,&
+            6314.5935560586195, 6176.261798765726, 6009.786250567006, 5815.93664135191, 5595.607530784274,&
+            5349.813915423737, 5079.686231655515, 4786.464804089997, 4471.493761489497, 4136.214531849416,&
+            3782.159065784034, 3410.9427723668023, 3024.2570210060517, 2623.861459424205, 2211.575967478841,&
+            1789.272421528013, 1358.866341233585, 922.3084126460911, 481.57594455740525, 38.664272559732176,&
+            -404.4219463646025, -845.6774903574776, -1283.1052260356212, -1714.7247817391615, -2138.5812132261103,&
+            -2552.753432230469, -2955.362548810453, -3344.5803362994684, -3718.6373584479356, -4075.8308334100616,&
+            -4414.532463562326, -4733.195984828237, -5030.364389486537, -5304.6767598472015, -5554.874719912398,&
+            -5779.808327626059, -5978.441563897056, -6149.857575200546, -6293.263249477752, -6407.993273398453,&
+            -6493.513614179161, -6549.424260828154, -6575.461118117091, -6571.497731157684, -6537.546250662111,&
+            -6473.757397711444, -6380.419837864755, -6257.958722571676, -6106.933571934138, -5928.035495276835,&
+            -5722.083823026676, -5490.022158464803, -5232.9137849076305, -4951.936516220711, -4648.3771079395765,&
+            -4323.625090256498, -3979.1660420189, -3616.574648070642, -3237.5073821101923, -2843.6947642803448,&
+            -2436.9333405604957, -2019.0775641823452, -1592.031466163807, -1157.7399809554634, -718.1801319704053,&
+            -275.35223601432557, 168.72890733147, 612.0429155310919 /)
+
+        z_vals      = (/ 6682.038294502038, 6607.0307644424165, 6501.8734921742125, 6367.042415052587, 6203.148171947553,&
+            6010.93358419692, 5791.270441157087, 5545.155720603305, 5273.707374349175, 4978.159524561255,&
+            4659.857016797191, 4320.249507415202, 3960.885007363264, 3583.4029183062235, 3189.5266725528536,&
+            2781.055830274453, 2359.8577415301484, 1927.8588850309964, 1487.0359072494732, 1039.4063662954397,&
+            587.01917240794, 131.9450012576637, -323.73333332844396, -777.9308350454152, -1228.5702943725405,&
+            -1673.5920130515922, -2110.9634210350255, -2538.688602443353, -2954.817666600897, -3357.455660681554,&
+            -3744.771231864449, -4115.004989409664, -4466.477468059891, -4797.596590173402, -5106.864580720168,&
+            -5392.884335930978, -5654.365450564964, -5890.129706417098, -6099.11604595301, -6280.385078078309,&
+            -6433.122902521485, -6556.644408532332, -6650.3960023798845, -6713.9578025750825, -6747.045310405938,&
+            -6749.510558643918, -6721.342624475021, -6662.667639501295, -6573.748366310433, -6454.983125625859,&
+            -6306.904078953601, -6130.175238709394, -5925.589911234742, -5694.067339013946, -5436.6490230695545,&
+            -5154.494486993373, -4848.8764143886865, -4521.175207022572, -4172.873008259504, -3805.5472131422302,&
+            -3420.8634663301395, -3020.568478416216, -2606.482250496465, -2180.4898525564467, -1744.5328508817709,&
+            -1300.6003617161389, -850.7196750975179, -396.9468777212519, 58.642536859367105, 513.96367037947,&
+            966.9321874884578, 1415.4742207673744, 1857.5362631848068, 2291.094867312583, 2714.166140620363,&
+            3124.814969810593, 3521.1640321664822, 3901.402512711647, 4263.794406801175, 4606.686437186749,&
+            4928.515661443597, 5227.816456343788, 5503.226955189794, 5753.495100009383, 5977.484151289982,&
+            6174.177531646045, 6342.683126809845, 6482.237156515285, 6592.207526874503, 6672.096393790979,&
+            6721.542138825866, 6740.320856660477, 6728.347407665809 /)
+
+        vx_vals  = (/ 2.0797153239328927, 2.1190582470535015, 2.1487620878541285, 2.1686899507213315, 2.1787479395370224,&
+            2.1788867973633086, 2.169102326512362, 2.1494343369891276, 2.1199668946035533, 2.0808294565942984,&
+            2.032195798103411, 1.9742832343442314, 1.907352790790755, 1.8317077580098657, 1.7476925862036055,&
+            1.6556909653548455, 1.5561238676548892, 1.4494480602192235, 1.3361540938450693, 1.216764992513522,&
+            1.0918326721247928, 0.9619335499613356, 0.8276677559341222, 0.6896563673391014, 0.548537211808185,&
+            0.404961826083069, 0.2595924186493676, 0.11309842090432953, -0.033848597476748496, -0.18057579396191303,&
+            -0.32641212020003585, -0.4706919049177677, -0.6127592175334681, -0.7519709304873728, -0.8877001582061871,&
+            -1.0193371276875858, -1.1462911394751303, -1.2679940429958343, -1.383901376217442, -1.493496064056003,&
+            -1.5962900844071481, -1.6918266346523574, -1.7796821639746225, -1.8594683759047559, -1.930831918467966,&
+            -1.9934558073359363, -2.0470602334198706, -2.0914035336815675, -2.1262852241755796, -2.151547451729648,&
+            -2.1670722996686766, -2.172782866764182, -2.168646595043904, -2.154675013467294, -2.1309228140379686,&
+            -2.097488240757327, -2.054513376746901, -2.0021837875331214, -1.9407278700161956, -1.8704164001604546,&
+            -1.791560741049301, -1.7045120953087716, -1.609660169343286, -1.5074319766835653, -1.3982906211138462,&
+            -1.2827348404908774, -1.1612937316923417, -1.0345214014985533, -0.9029996502238115, -0.7673336017958665,&
+            -0.6281474243877333, -0.48608467409191336, -0.3418020572802087, -0.19596548037655112, -0.04924722143327155,&
+            0.09767689641044247, 0.24413095183813563, 0.3894429791615178, 0.5329478416200099, 0.6739886508229014,&
+            0.8119201732225643, 0.9461138197559856, 1.075959637776023, 1.2008695738224038, 1.320278873201574,&
+            1.4336489818021367, 1.540469335634728, 1.6402583614891357, 1.732567630115414, 1.816982843022994,&
+            1.8931245874775322, 1.960649012021734, 2.01925096013006 /)
+
+        vy_vals  = (/ 7.300577912249002, 7.202120538984326, 7.070878860665573, 6.90743506450951, 6.712517515426457,&
+            6.486997714847501, 6.23188578266617, 5.9483255281761425, 5.637592024901249, 5.3010869345928935,&
+            4.940331242213968, 4.556960589680341, 4.152718097673897, 3.729445790674295, 3.2890787059103834,&
+            2.8336352338218096, 2.365206545278644, 1.8859466706415893, 1.3980628156842823, 0.9038046755077809,&
+            0.40545027038143616, -0.094703376801344, -0.59434698232834, -1.0911745200036491, -1.5828976240110502,&
+            -2.0672549431566236, -2.542022255727687, -3.0050234399676707, -3.4541441064174667, -3.887338736227909,&
+            -4.302640139396071, -4.6981689471113945, -5.072143137407782, -5.422885761222072, -5.748831198642559,&
+            -6.048528295708793, -6.32064780768167, -6.563987068317808, -6.777474150706344, -6.960173600297738,&
+            -7.111288009667206, -7.230160390609887, -7.316275656133425, -7.369261593410994, -7.388889866210224,&
+            -7.375078315294299, -7.327889813017214, -7.247531254063724, -7.1343545396451225, -6.988854512686095,&
+            -6.8116645953767625, -6.603558640049534, -6.365450338812312, -6.098384921397938, -5.803539100822478,&
+            -5.482218045360532, -5.135850194096199, -4.765981167974391, -4.374267363746959, -3.9624688866733315,&
+            -3.5324387012812153, -3.086121085320564, -2.6255417422329237, -2.1527983420483947, -1.6700515817043753,&
+            -1.1795148709147616, -0.6834391618214838, -0.18410454735993192, 0.3161836247721026, 0.8151136032722495,&
+            1.3103791831745888, 1.7996912637058962, 2.280790941162654, 2.751460062541233, 3.2095321360729483,&
+            3.6529012048323906, 4.079532614225198, 4.48747325629925, 4.874859669154023, 5.2399255705922885,&
+            5.5810131814919455, 5.896578922010942, 6.185197420132488, 6.445568861262864, 6.67652574089985,&
+            6.877034828425971, 7.046199661850096, 7.183265223662285, 7.2876234285807975, 7.35881266576162,&
+            7.396518069580296, 7.400572039105373, 7.370956311090771 /)
+
+        vz_vals  = (/ -0.9968010080317333, -1.502506671881744, -2.0014132407728944, -2.4912590641996135, -2.969818091185215,&
+            -3.4349121340191098, -3.884422083784645, -4.316295193684226, -4.728553364411682, -5.119304310368893,&
+            -5.486750672037101, -5.829197658077127, -6.145063087683969, -6.432883701106776, -6.6913233934155425,&
+            -6.91918185906022, -7.11540061236182, -7.279068019203137, -7.409424225762732, -7.505866398417632,&
+            -7.567952221435513, -7.595398429928264, -7.588084938474152, -7.546059079462936, -7.469532163409317,&
+            -7.358876463456851, -7.214623622593225, -7.037463617438367, -6.828239013528119, -6.587938044519016,&
+            -6.3176915656140356, -6.018766438593244, -5.692558483194781, -5.3405833564521314, -4.964467132508124,&
+            -4.565938719151954, -4.146824229279959, -3.709035645883403, -3.254565208968325, -2.7854741110047443,&
+            -2.303882863182063, -1.8119622892356202, -1.3119240486793915, -0.8060120191617762, -0.2964937554284478,&
+            0.21434915640115454, 0.7242315070452726, 1.230871142258918, 1.7319976691250931, 2.225364925795568,&
+            2.7087581438884043, 3.179998580402568, 3.636957899131697, 4.077566928955757, 4.499821355128556,&
+            4.901793101238427, 5.281639874625121, 5.637614839644509, 5.96807482385123, 6.271489627509885,&
+            6.546447724319053, 6.791660728387121, 7.005974852416435, 7.188376026077476, 7.337996098313709,&
+            7.45411951815418, 7.536189465295325, 7.583802387361124, 7.5967172789199555, 7.574861278624894,&
+            7.5183257908720345, 7.427368404702681, 7.30240968631677, 7.14403043874982, 6.952967511654237,&
+            6.730109578492399, 6.476493479950002, 6.193298120308379, 5.881837105687309, 5.543553795222516,&
+            5.180014063917279, 4.792894449398428, 4.383976029252548, 3.9551365349678953, 3.5083401393962497,&
+            3.0456267024484927, 2.5691038996889977, 2.0809406026134587, 1.5833549478080657, 1.0786023758770573,&
+            0.5689668547834457, 0.05675380686303381, -0.4557185507673941 /)
+
+        ! call function to validate the ephemerides
+        call compute_chebys_and_error(degree, nephem, n_lag, t_vals, x_vals, y_vals, z_vals,&
+                                            vx_vals, vy_vals, vz_vals, avg_error)
+        ! Check avg error is within 0.05km (50m)
+        @assertEqual(0.0_dp, avg_error(7), tolerance = 0.05_dp)
+
+    end subroutine test_real_LEO_cheby_generation
+
+    !=========================================================================
+    !
+    !> @anchor      test_real_GEO_cheby_generation
+    !!
+    !> @brief       Tests the average error from chebyshev generation and interpolation for a real GEO
+    !> @author      Alex Bush
+    !!
+    !> @date        <ul>
+    !!                <li> 21.07.2025 (Added function to test_slamInterpolation)
+    !!              </ul>
+    !!
+    !----------------------------------------------------------------------
+
+    @test
+    subroutine test_real_GEO_cheby_generation()
+
+        !  Selected data range: 2025-06-14T21:00:00.106Z → 2025-06-15T20:45:00.106Z
+        !  Object ID: 21789 "Unspecified"
+
+        implicit none
+        ! Tests the slam_interpolation/chebyshev_generation subroutine
+        ! Uses Known trajectories and chebys to test generation
+        ! Compares generation against original values to calculate error
+
+        ! Reference Data : oem database
+        integer                  :: degree, n_lag, nephem
+        real(dp), dimension(96)  :: t_vals, x_vals, y_vals, z_vals, vx_vals, vy_vals, vz_vals
+        real(dp), dimension(7)   :: avg_error
+        ! initialization of test data
+        degree = 36
+        nephem = 96
+        n_lag = 5
+        ! initialise ephemeris data from database
+        ! Ephemeris data extracted from database JSON using python
+
+        t_vals   = (/ 0.0, 900.0, 1800.0, 2700.0, 3600.0,&
+            4500.0, 5400.0, 6300.0, 7200.0, 8100.0,&
+            9000.0, 9900.0, 10800.0, 11700.0, 12600.0,&
+            13500.0, 14400.0, 15300.0, 16200.0, 17100.0,&
+            18000.0, 18900.0, 19800.0, 20700.0, 21600.0,&
+            22500.0, 23400.0, 24300.0, 25200.0, 26100.0,&
+            27000.0, 27900.0, 28800.0, 29700.0, 30600.0,&
+            31500.0, 32400.0, 33300.0, 34200.0, 35100.0,&
+            36000.0, 36900.0, 37800.0, 38700.0, 39600.0,&
+            40500.0, 41400.0, 42300.0, 43200.0, 44100.0,&
+            45000.0, 45900.0, 46800.0, 47700.0, 48600.0,&
+            49500.0, 50400.0, 51300.0, 52200.0, 53100.0,&
+            54000.0, 54900.0, 55800.0, 56700.0, 57600.0,&
+            58500.0, 59400.0, 60300.0, 61200.0, 62100.0,&
+            63000.0, 63900.0, 64800.0, 65700.0, 66600.0,&
+            67500.0, 68400.0, 69300.0, 70200.0, 71100.0,&
+            72000.0, 72900.0, 73800.0, 74700.0, 75600.0,&
+            76500.0, 77400.0, 78300.0, 79200.0, 80100.0,&
+            81000.0, 81900.0, 82800.0, 83700.0, 84600.0,&
+            85500.0 /)
+            
+        x_vals      = (/ -36057.95958643016, -34558.165395768236, -32909.68837929546, -31119.616442665574, -29195.64675746132,&
+            -27146.05279005136, -24979.648852542738, -22705.75232496435, -20334.14370780417, -17875.02467342418,&
+            -15338.974293619807, -12736.90362866037, -10080.008870494268, -7379.723239394915, -4647.667839108313,&
+            -1895.6016805434683, 864.6289118590935, 3621.1412937352193, 6362.067674742536, 9075.606251869627,&
+            11750.072080762402, 14373.947464338244, 16935.931639575403, 19424.989545984143, 21830.399462901787,&
+            24141.799307376707, 26349.23139002624, 28443.185432836188, 30414.639660388068, 32255.09978442412,&
+            33956.63571092738, 35511.91580899792, 36914.23859162702, 38157.56167000969, 39236.52785518337,&
+            40146.48829349991, 40883.52253563362, 41444.45545244546, 41826.87092499105, 42029.12225019501,&
+            42050.33921816868, 41890.43183172469, 41550.0906533066, 41030.78377923085, 40334.75045574398,&
+            39464.99136592677, 38425.25563081407, 37220.0245822292, 35854.49237868296, 34334.54354920964,&
+            32666.72756316102, 30858.230536693223, 28916.84419892415, 26850.932252452527, 24669.394274071972,&
+            22381.627312033073, 19997.485346074853, 17527.23678559512, 14981.52018974164, 12371.298400832844,&
+            9707.811289319177, 7002.5273144443945, 4267.094109841513, 1513.288307469162, -1247.0351835093966,&
+            -4001.9942239732613, -6739.73059798947, -9448.46105126879, -12116.527994937434, -14732.449656235103,&
+            -17284.969460283337, -19763.104430537947, -22156.192399978194, -24453.937830420316, -26646.45604351666,&
+            -28724.31567407633, -30678.57916421681, -32500.84112548519, -34183.26440544993, -35718.61370532628,&
+            -37100.28660588882, -38322.34187016832, -39379.52490325073, -40267.290261748596, -40981.821118213884,&
+            -41520.04559879992, -41879.64992583895, -42059.088310596795, -42057.58955526641, -41875.160337162066,&
+            -41512.58516208894, -40971.42298789231, -40254.00053314895, -39363.40229988731, -38303.45735297744,&
+            -37078.722912399484 /)
+
+        y_vals      = (/ -20643.952961465246, -22929.516350409842, -25116.429462950473, -27195.28059089369, -29157.122081335965,&
+            -30993.508825652054, -32696.53460803449, -34258.866157427445, -35673.77475606439, -36935.16526782483,&
+            -38037.60246021888, -38976.33450497051, -39747.3135538647, -40347.21329871249, -40773.4434369097,&
+            -41024.16097712982, -41098.27833308206, -40995.46816698103, -40716.16495834833, -40261.56328792388,&
+            -39633.61284077365, -38835.01014703666, -37869.187093127584, -36740.29625051033, -35453.19308329778,&
+            -34013.41510986978, -32427.15810732896, -30701.24946086682, -28843.118772947837, -26860.765859478266,&
+            -24762.726271859534, -22558.034494880558, -20256.184980748716, -17867.09118914638, -15401.042811988416,&
+            -12868.661369501711, -10280.854371291096, -7648.76824222922, -4983.740218235064, -2297.249421302904,&
+            399.1326735016806, 3093.7921639640294, 5775.122822985336, 8431.576160111932, 11051.71122566933,&
+            13624.243942196736, 16138.095750145572, 18582.44135795849, 20946.755390702543, 23220.85773632083,&
+            25394.957394321835, 27459.694638277106, 29406.181310852644, 31226.03907820674, 32911.43547943056,&
+            34455.11761624143, 35850.44333834204, 37091.40979066767, 38172.679200146915, 39089.60179151975,&
+            39838.235734174676, 40415.36403479367, 40818.508303822324, 41045.93933731952, 41096.68446951587,&
+            40970.53166543075, 40668.030337008175, 40190.488880434146, 39539.968946508474, 38719.276470078534,&
+            37731.94949856502, 36582.24287343931, 35275.10983207754, 33816.180610677344, 32211.738141795857,&
+            30468.690952520486, 28594.543381220592, 26597.363242254363, 24485.74707881415, 22268.783154280052,&
+            19956.012341956575, 17557.387081854235, 15083.228581235233, 12544.182442885374, 9951.172911559544,&
+            7315.355934683791, 4648.071238183132, 1960.7936222696542, -734.9163148800393, -3427.461815460009,&
+            -6105.259750909587, -8756.790349348692, -11370.646650067752, -13935.583474786308, -16440.56570747288,&
+            -18874.815677512386 /)
+
+        z_vals      = (/ -7242.244158117268, -7664.030346187642, -8052.841056503548, -8407.002570942595, -8724.990063492725,&
+            -9005.434168948312, -9247.12688774372, -9449.026801333435, -9610.263575373618, -9730.141730915184,&
+            -9808.14366685965, -9843.931920059305, -9837.35065264185, -9788.426359400788, -9697.367791404053,&
+            -9564.56509531803, -9390.5881713149, -9176.184255810327, -8922.27473865031, -8629.951227718355,&
+            -8300.470877252781, -7935.250999421106, -7535.862981893578, -7104.025537264368, -6641.597313165575,&
+            -6150.568894802393, -5633.054234379238, -5091.281544473535, -4527.5836948404085, -3944.3881543624807,&
+            -3344.2065219098226, -2729.6236917129568, -2103.2867004768345, -1467.893304864574, -826.1803391575016,&
+            -180.91190384135314, 465.1325634274885, 1109.1702825450539, 1748.4271392067983, 2380.1496545095024,&
+            3001.6168639663297, 3610.1520544503815, 4203.134308257315, 4778.009804375342, 5332.302828158054,&
+            5863.62644190804, 6369.692770390232, 6848.3228569972, 7297.4560481767085, 7715.158865790513,&
+            8099.633329305596, 8449.22469210575, 8762.428558747719, 9037.897352660058, 9274.446106589388,&
+            9471.057551017906, 9626.886478804296, 9741.263367420515, 9813.697243361275, 9843.87777657169,&
+            9831.676596065066, 9777.147821265438, 9680.52780700224, 9542.234103486928, 9362.863635990916,&
+            9143.1901123294, 8884.160669590892, 8586.891774843563, 8252.664397776192, 7882.918476371519,&
+            7479.246699758982, 7043.387635334192, 6577.218230044996, 6082.745718424416, 5562.098972483517,&
+            5017.519330951516, 4451.350947550518, 3866.0307000225434, 3264.077703463962, 2648.0824731686253,&
+            2020.695783627042, 1384.6172715707823, 742.583831986257, 97.3578568395237, -548.2846331341667,&
+            -1191.565912828961, -1829.7184824319743, -2459.996951458047, -3079.689826505405, -3686.1311525457318,&
+            -4276.711958216159, -4848.891456434269, -5400.2079527339565, -5928.289414963865, -6430.863659419112,&
+            -6905.768110106437 /)
+
+        vx_vals  = (/ 1.5813873559120812, 1.7502939849639536, 1.9116751363892557, 2.0648364875842447, 2.2091189216052265,&
+            2.343901359381892, 2.468603432005514, 2.5826879816310027, 2.685663380265498, 2.7770856563065878,&
+            2.8565604195138867, 2.923744575832861, 2.9783478243163235, 3.020133929263271, 3.0489217615948827,&
+            3.064586104406941, 3.067058218646107, 3.056326165844351, 3.032434885888959, 2.9954860288790157,&
+            2.945637541199749, 2.883103007053138, 2.8081507478011267, 2.721102682591281, 2.622332954858614,&
+            2.5122663303995685, 2.3913763737917684, 2.2601834110135908, 2.1192522871167365, 1.9691899287954193,&
+            1.8106427226168085, 1.644293720558478, 1.4708596852760973, 1.2910879882793853, 1.1057533748419792,&
+            0.9156546100497385, 0.7216110209134212, 0.5244589498610825, 0.3250481353068103, 0.12423803524681012,&
+            -0.07710588998729401, -0.27811591954963044, -0.4779258221694027, -0.6756745982236212, -0.8705101975986005,&
+            -1.0615931972945407, -1.2481004229449844, -1.4292284986990795, -1.6041973102465104, -1.7722533661628452,&
+            -1.9326730431914214, -2.0847657015974677, -2.2278766572663664, -2.361389997847506, -2.484731230895856,&
+            -2.5973697526818347, -2.6988211270911586, -2.788649164856268, -2.8664677941988193, -2.931942714861689,&
+            -2.984792828439317, -3.0247914388855173, -3.051767218044625, -3.065604932108856, -3.066245925956298,&
+            -3.0536883633109113, -3.027987221838378, -2.989254043294419, -2.9376564399366365, -2.873417359521734,&
+            -2.7968141122208814, -2.708177163831844, -2.607888700741161, -2.496380973042696, -2.374134423156358,&
+            -2.2416756082664824, -2.0995749257680156, -1.9484441517120286, -1.7889338030525326, -1.6217303352304544,&
+            -1.4475531873038727, -1.267151687430073, -1.0813018320924663, -0.8908029529476608, -0.6964742855949961,&
+            -0.49915145494922547, -0.2996828921962753, -0.0989261985673652, 0.10225552866620294, 0.30299739247247515,&
+            0.5024363990162002, 0.69971515172367, 0.8939855209762047, 1.084412274033725, 1.270176649998912,&
+            1.450479864872649 /)
+
+        vy_vals  = (/ -2.590714787130631, -2.486492831281575, -2.371570426806283, -2.2464410605026, -2.111642113553522,&
+            -1.9677525732990802, -1.8153905665223682, -1.6552107243326586, -1.4879013893691904, -1.3141816768176935,&
+            -1.1347984013071069, -0.9505228823958902, -0.7621476419301706, -0.5704830070629658, -0.37635363320101256,&
+            -0.18059496160759697, 0.015950373288227848, 0.21243617147390337, 0.4080163141913187, 0.6018484142020901,&
+            0.7930974535392554, 0.9809393927800001, 1.164564735890291, 1.3431820348273285, 1.5160213182920192,&
+            1.6823374293027695, 1.8414132566379076, 1.992562845654437, 2.135134374502563, 2.268512982421257,&
+            2.3921234374407176, 2.505432631564025, 2.6079518923864304, 2.69923910090498, 2.778900606230204,&
+            2.8465929288623593, 2.9020242451829725, 2.9449556468335314, 2.9752021696782815, 2.9926335881062838,&
+            2.997174971471244, 2.988807000530367, 2.9675660427890627, 2.9335439867060695, 2.8868878357530905,&
+            2.82779906433188, 2.756532738579831, 2.6733964060574995, 2.578748759302391, 2.4729980791655177,&
+            2.3566004647690066, 2.23005785782033, 2.0939158698740945, 1.9487614219676983, 1.7952202068459442,&
+            1.6339539847460014, 1.4656577244245732, 1.291056601776191, 1.110902869004971, 0.9259726078834549,&
+            0.7370623811323979, 0.5449857964007424, 0.3505699977362345, 0.15465209973114147, -0.041924420221359296,&
+            -0.23831335589272243, -0.43366941668635617, -0.6271518668013735, -0.8179281433314908, -1.005177437649166,&
+            -1.1880942245900696, -1.3658917241976727, -1.5378052811257148, -1.7030956471592276, -1.8610521527799013,&
+            -2.0109957542115713, -2.152281942959126, -2.2843035054840315, -2.406493121331295, -2.5183257887778363,&
+            -2.6193210678196013, -2.709045131142372, -2.787112614562809, -2.853188259320028, -2.9069883394697413,&
+            -2.948281868589513, -2.9768915809447885, -2.9926946831752606, -2.9956233735666524, -2.9856651269832644,&
+            -2.962862744382403, -2.9273141668726135, -2.879172055307575, -2.818643137235196, -2.7459873239933104,&
+            -2.661516601737802 /)
+
+        vz_vals  = (/ -0.48631135365536127, -0.4506549555686876, -0.41305876389996776, -0.37368432689813513, -0.3327008499303308,&
+            -0.29028447310055305, -0.2466175188860276, -0.20188771291051866, -0.15628738105638296, -0.1100126262713139,&
+            -0.06326248848411561, -0.016238091156162572, 0.030858221944373952, 0.07782375609048024, 0.12445633736650398,&
+            0.17055518312759038, 0.21592176739592803, 0.26036067743908886, 0.3036804577945566, 0.34569443802941957,&
+            0.3862215405779206, 0.42508706507246646, 0.4621234456617811, 0.4971709779215434, 0.5300785120902016,&
+            0.5607041095015953, 0.5889156592488551, 0.614591452296881, 0.6376207104462305, 0.6579040677739834,&
+            0.6753540023883391, 0.6898952165654689, 0.7014649635949576, 0.7100133198945948, 0.7155034012177098,&
+            0.7179115220364116, 0.717227297445916, 0.7134536871942061, 0.7066069817046307, 0.6967167302174152,&
+            0.6838256114290578, 0.6679892472627026, 0.6492759606413783, 0.6277664783794675, 0.6035535805409763,&
+            0.5767416978299152, 0.5474464588035078, 0.5157941889026055, 0.48192136349527415, 0.4459740173176596,&
+            0.40810711287983426, 0.36848387057503, 0.32727506338718554, 0.28465827924328047, 0.2408171541948915,&
+            0.19594057973450296, 0.15022188766457242, 0.1038580160356597, 0.05704865975231976, 0.0099954095134226,&
+            -0.037099117194068804, -0.08403214929393196, -0.13060163573146236, -0.1766071157198875, -0.22185058186153353,&
+            -0.26613733239851806, -0.3092768089157546, -0.351083415869626, -0.39137731840142453, -0.42998521499690495,&
+            -0.466741081661626, -0.5014868844103814, -0.5340732570208586, -0.5643601411513813, -0.5922173860945779,&
+            -0.6175253056233795, -0.6401751895787158, -0.6600697680490101, -0.6771236262022453, -0.6912635680552222,&
+            -0.7024289276834905, -0.710571826607569, -0.7156573763243701, -0.7176638251920917, -0.7165826491071603,&
+            -0.7124185856575294, -0.7051896116738356, -0.6949268643270097, -0.6816745061634767, -0.6654895347094208,&
+            -0.6464415374750017, -0.6246123934268184, -0.6000959222303577, -0.5729974827454098, -0.5434335224674325,&
+            -0.5115310798217358 /)
+
+        ! call function to validate the ephemerides
+        call compute_chebys_and_error(degree, nephem, n_lag, t_vals, x_vals, y_vals, z_vals,&
+                                            vx_vals, vy_vals, vz_vals, avg_error)
+        ! Check avg error is within 0.05km (50m)
+        @assertEqual(0.0_dp, avg_error(7), tolerance = 0.05_dp)
+
+    end subroutine test_real_GEO_cheby_generation
+
+    !=========================================================================
+    !
+    !> @anchor      test_real_GTO_cheby_generation
+    !!
+    !> @brief       Tests the average error from chebyshev generation and interpolation for a real GTO
+    !> @author      Alex Bush
+    !!
+    !> @date        <ul>
+    !!                <li> 21.07.2025 (Added function to test_slamInterpolation)
+    !!              </ul>
+    !!
+    !----------------------------------------------------------------------
+
+
+    @test 
+    subroutine test_real_GTO_cheby_generation()
+
+        !  Selected data range: 2025-05-31T20:07:27.560Z → 2025-06-01T06:52:27.560Z
+        !  Object ID: 34112 "Unspecified"
+
+        implicit none
+        ! Tests the slam_interpolation/chebyshev_generation subroutine
+        ! Uses Known trajectories and chebys to test generation
+        ! Compares generation against original values to calculate error
+
+        ! Reference Data : oem database
+        integer                  :: degree, n_lag, nephem
+        real(dp), dimension(44)  :: t_vals, x_vals, y_vals, z_vals, vx_vals, vy_vals, vz_vals
+        real(dp), dimension(7)   :: avg_error
+
+        ! initialization of test data
+        degree = 36
+        nephem = 44
+        n_lag = 5
+        ! initialise ephemeris data from database
+
+            t_vals   = (/ 0.0, 900.0, 1800.0, 2700.0, 3600.0,&
+        4500.0, 5400.0, 6300.0, 7200.0, 8100.0,&
+        9000.0, 9900.0, 10800.0, 11700.0, 12600.0,&
+        13500.0, 14400.0, 15300.0, 16200.0, 17100.0,&
+        18000.0, 18900.0, 19800.0, 20700.0, 21600.0,&
+        22500.0, 23400.0, 24300.0, 25200.0, 26100.0,&
+        27000.0, 27900.0, 28800.0, 29700.0, 30600.0,&
+        31500.0, 32400.0, 33300.0, 34200.0, 35100.0,&
+        36000.0, 36900.0, 37800.0, 38700.0 /)
+
+        x_vals      = (/ -31760.346346389517, -33217.38246275971, -34390.53015263985, -35306.16510904038, -35985.692297037094,&
+            -36446.70253584497, -36703.802108077434, -36769.220005918454, -36653.26054783433, -36364.64623753927,&
+            -35910.781259896685, -35297.95665257954, -34531.51203818341, -33615.964702304795, -32555.114066160855,&
+            -31352.127811137514, -30009.614829061084, -28529.689686841077, -26914.033412315977, -25163.956266103356,&
+            -23280.47009205614, -21264.38149838595, -19116.42379810722, -16837.457859123824, -14428.794913268082,&
+            -11892.738824972885, -9233.53559377644, -6459.111534129384, -3584.4253732266716, -638.3602393007992,&
+            2320.917049857711, 5168.064901547202, 7605.086588693619, 8841.022163273316, 6958.7116362809065,&
+            998.60743376712, -5768.298349224206, -11582.967630777934, -16391.906332665927, -20383.710025432785,&
+            -23720.28309502083, -26520.056127925753, -28869.06361310009, -30831.077090255778 /)
+
+        y_vals      = (/ -2887.2901376742593, -4686.836025675784, -6446.650091800536, -8158.426016111543, -9815.816441813693,&
+            -11413.733446299586, -12947.894346370611, -14414.514496297217, -15810.090443969944, -17131.2394221625,&
+            -18374.57385165739, -19536.5968476924, -20613.608975075436, -21601.618919893765, -22496.251994687882,&
+            -23292.65080940525, -23985.36216869019, -24568.203304149836, -25034.098797623043, -25374.876725898852,&
+            -25581.008168189604, -25641.267423114292, -25542.27963901128, -25267.9055539491, -24798.385170958234,&
+            -24109.115180897854, -23168.853099952717, -21936.993912256126, -20359.292655779424, -18360.896636418795,&
+            -15834.648796157853, -12621.610982499586, -8485.320017138594, -3149.614837295458, 3002.8648475966324,&
+            7279.335866191098, 8486.256841621667, 8040.011258566703, 6849.5573842059375, 5303.787210143741,&
+            3581.9603742848253, 1776.3787630598028, -60.87722648341039, -1898.2099818418978 /)
+
+        z_vals      = (/ -230.76694225235096, -1416.7819590670329, -2590.9156896285162, -3745.8118066658913, -4875.777965856397,&
+            -5976.226740680711, -7043.308168166998, -8073.658599447485, -9064.222062204903, -10012.117589795396,&
+            -10914.535751623309, -11768.653309937286, -12571.558278073067, -13320.17959666297, -14011.216680697647,&
+            -14641.064485129806, -15205.729606667743, -15700.73229569704, -16120.988009589799, -16460.660097272204,&
+            -16712.971999996935, -16869.962353488892, -16922.158491138478, -16858.131158272583, -16663.87228853652,&
+            -16321.9020066657, -15809.948158393034, -15098.926835129132, -14149.734981305983, -12907.943882588346,&
+            -11294.674825193173, -9190.702602022144, -6412.285166757091, -2719.625135131544, 1725.7486051605797,&
+            5075.570357280889, 6303.236965726065, 6311.308689213137, 5738.523216989048, 4869.776377969901,&
+            3840.517802950482, 2722.4261903256565, 1557.0071262573574, 370.0825071639013 /)
+
+        vx_vals  = (/ -1.7881363897249636, -1.4557883984502726, -1.156060997804968, -0.8826262341182725, -0.6306766463526808,&
+            -0.39648434609471706, -0.1771043981448981, 0.029829355776287328, 0.22624787571920263, 0.41374987397528395,&
+            0.593676925421294, 0.7671690858121533, 0.9352065525409591, 1.0986410677736123, 1.2582195215272471,&
+            1.4146013207670218, 1.5683703863689167, 1.7200419936000098, 1.8700639536439956, 2.018810673267073,&
+            2.166567154019972, 2.3134975098577635, 2.4595881421598746, 2.6045473755237194, 2.7476269752868863,&
+            2.887297169305302, 3.020633155098777, 3.1421001582731396, 3.2409968929410042, 3.2956517464371733,&
+            3.258944321014038, 3.0178338199288124, 2.266269894088338, 0.1188793570977499, -4.670611838403899,&
+            -7.705913958835909, -7.065129100690851, -5.869171096482646, -4.854942034406745, -4.045707556870835,&
+            -3.3905881639874065, -2.8468735813783677, -2.3848275102655903, -1.9840874823098817 /)
+
+        vy_vals  = (/ -2.0177214801871255, -1.9791936629633469, -1.9299860291676996, -1.872797546680989, -1.8093582465376594,&
+            -1.7407808874103814, -1.6677686265344496, -1.5907413929583842, -1.5099143406166378, -1.4253468581369373,&
+            -1.336972677350458, -1.2446172050773316, -1.1480056254471807, -1.046763726412204, -0.9404123330701931,&
+            -0.8283554145349995, -0.7098611948147097, -0.5840347999758766, -0.4497799653711095, -0.3057459115828185,&
+            -0.150253375238662, 0.01880954943907201, 0.2041365153727788, 0.4092208131111694, 0.6386816134660068,&
+            0.8987662472656566, 1.1981481061875943, 1.549238258682803, 1.9704183327771712, 2.4899525308718196,&
+            3.15281994945432, 4.030866097933055, 5.219098885940645, 6.622228821366678, 6.451790636748552,&
+            2.831587421322512, 0.17939335336194787, -1.0129951079370458, -1.5658613333573939, -1.8379400902624787,&
+            -1.9720085223165467, -2.0310801978159203, -2.0460169879304857, -2.033258466877411 /)
+
+        vz_vals  = (/ -1.3210291344261624, -1.3127512448053478, -1.295088324545512, -1.270303371798623, -1.2398896309779226,&
+            -1.2048436755769585, -1.16582872850041, -1.1232753899778807, -1.077445124930075, -1.0284706764948433,&
+            -0.9763815675529588, -0.9211194841506237, -0.8625463570816989, -0.8004467297202226, -0.7345251742451387,&
+            -0.6643988923528821, -0.5895850772951866, -0.5094820144618184, -0.42334214568688194, -0.330234269886702,&
+            -0.22899047184857885, -0.11813088110106348, 0.004244707228824351, 0.1406161975658631, 0.2942834174238068,&
+            0.4697388279315027, 0.673265149158373, 0.9139295483252248, 1.2053040249394977, 1.568555195973008,&
+            2.0380885255654477, 2.671016313652558, 3.5517876561479484, 4.663491554019988, 4.8133071746887115,&
+            2.4267217295309202, 0.5189710551210106, -0.38875158400047516, -0.83502723619936, -1.0718169058177598,&
+            -1.202700104261279, -1.2745047473504847, -1.3106516175956375, -1.3238662484384058 /)
+
+        ! call function to validate the ephemerides
+        call compute_chebys_and_error(degree, nephem, n_lag, t_vals, x_vals, y_vals, z_vals,&
+                                            vx_vals, vy_vals, vz_vals, avg_error)
+        ! Use large error value due to being a GTO
+        @AssertLessThanOrEqual(avg_error(7),34.0_dp)
+
+    end subroutine test_real_GTO_cheby_generation
+
+end module test_slamInterpolation
+      

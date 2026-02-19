@@ -64,7 +64,7 @@
   if (.not. t%enter_procedure_ok(checkin_name)) then ;\
     return ;\
   end if ;\
-  this%lifecycle_helper => lifecycle_helper_create_if_non_existent_and_ensure_create_call(this%lifecycle_helper)
+  this%lifecycle_helper => lc_helper_create_if_non_existent_and_ensure_create_call(this%lifecycle_helper)
 
 #define ENTER_CREATE_PROCEDURE(procedure_name) ;\
   ENTER_EXIT_COMMON_DECLARATIONS(procedure_name) ;\
@@ -77,18 +77,18 @@
 #define ENTER_FINALIZE_PROCEDURE(procedure_name) ;\
   ENTER_EXIT_COMMON_DECLARATIONS(procedure_name) ;\
   ENTER_EXIT_CHECKIN_STUFF ;\
-  object_to_destroy%lifecycle_helper => lifecycle_helper_create_if_non_existent_and_ensure_create_call(object_to_destroy%lifecycle_helper) ;\
+  object_to_destroy%lifecycle_helper => lc_helper_create_if_non_existent_and_ensure_create_call(object_to_destroy%lifecycle_helper) ;\
   call object_to_destroy%lifecycle_helper%set_finalize_subroutine_called()
 
 #define ENTER_FINALIZE_INTERNAL_PROCEDURE(procedure_name) ;\
   ENTER_EXIT_COMMON_DECLARATIONS(procedure_name) ;\
   ENTER_EXIT_CHECKIN_STUFF ;\
-  this%lifecycle_helper => lifecycle_helper_create_if_non_existent_and_ensure_final_call(this%lifecycle_helper)
+  this%lifecycle_helper => lc_helper_create_if_non_existent_and_ensure_final_call(this%lifecycle_helper)
 
 #define ENTER_NORMAL_PROCEDURE(procedure_name) ;\
   ENTER_EXIT_COMMON_DECLARATIONS(procedure_name) ;\
   ENTER_EXIT_CHECKIN_STUFF ;\
-  this%lifecycle_helper => lifecycle_helper_create_if_non_existent_and_ensure_create_call(this%lifecycle_helper)
+  this%lifecycle_helper => lc_helper_create_if_non_existent_and_ensure_create_call(this%lifecycle_helper)
 
 
 #define EXIT_PROCEDURE() ;\

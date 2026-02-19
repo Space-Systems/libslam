@@ -55,7 +55,8 @@ module slam_strings
   public :: replace_text
 
   interface toString
-    module procedure boolToString, intToString, int8ToString, realToString
+    module procedure boolToString, intToString, int8ToString, realToString, &
+                     intArrayToString, realArrayToString
   end interface toString
 
 contains
@@ -434,5 +435,78 @@ contains
       end if
 
     end function string_to_boolean
+
+    !=========================================================================
+    !!
+    !>  @anchor     intArrayToString
+    !!
+    !>  @brief      Converts an integer array to a string
+    !>  @author     Oscar Rodriguez (OR)
+    !!
+    !!  @details    Converts a given integer array to a string format [val1, val2, val3, ...]
+    !!
+    !>  @param[in]  iArray  integer array to be converted
+    !!
+    !!  @return     cvalue  the converted array as character string
+    !!
+    !>  @date       <ul>
+    !!                <li>19.08.2025 (initial implementation)</li>
+    !!              </ul>
+    !!
+    !-------------------------------------------------------------------------
+    function intArrayToString(iArray) result(cvalue)
+        integer, intent(in)                 :: iArray(:)
+        character(:), allocatable           :: cvalue
+        character(:), allocatable           :: ctmp
+        integer                             :: i
+
+        ctmp = '['
+        do i = 1, size(iArray)
+            if (i > 1) then
+                ctmp = ctmp // ', '
+            end if
+            ctmp = ctmp // toString(iArray(i))
+        end do
+        ctmp = ctmp // ']'
+        cvalue = ctmp
+
+    end function intArrayToString
+
+    !=========================================================================
+    !!
+    !>  @anchor     realArrayToString
+    !!
+    !>  @brief      Converts a real array to a string
+    !>  @author     Oscar Rodriguez (OR)
+    !!
+    !!  @details    Converts a given real(dp) array to a string format [val1, val2, val3, ...]
+    !!
+    !>  @param[in]  rArray  real(dp) array to be converted
+    !!
+    !!  @return     cvalue  the converted array as character string
+    !!
+    !>  @date       <ul>
+    !!                <li>19.08.2025 (initial implementation)</li>
+    !!              </ul>
+    !!
+    !-------------------------------------------------------------------------
+    function realArrayToString(rArray) result(cvalue)
+        use slam_types, only: dp
+        real(dp), intent(in)                :: rArray(:)
+        character(:), allocatable           :: cvalue
+        character(:), allocatable           :: ctmp
+        integer                             :: i
+
+        ctmp = '['
+        do i = 1, size(rArray)
+            if (i > 1) then
+                ctmp = ctmp // ', '
+            end if
+            ctmp = ctmp // toString(rArray(i))
+        end do
+        ctmp = ctmp // ']'
+        cvalue = ctmp
+
+    end function realArrayToString
 
 end module slam_strings
