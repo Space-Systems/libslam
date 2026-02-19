@@ -91,12 +91,12 @@ module slam_error_handling
   integer, parameter, public :: DEBUG_MSGS =  3       ! print debug msgs, remarks, warnings and errors
   integer, parameter, public :: ALL_MSG    =  4       ! print all messages
 
-  integer :: log_verbosity = ALL_MSG        ! logfile verbosity level (all messages as default
+  integer :: log_verbosity = REMARKS        ! logfile verbosity level (all messages as default
                                             !   0 = error messages only
                                             !   1 = errors and warnings
                                             !   2 = errors, warnings and remarks
                                             !   3 = all messages (incl. file open/close)
-  integer :: cli_verbosity = ERRORS         ! CLI verbosity level (only error messages as default)
+  integer :: cli_verbosity = REMARKS        ! CLI verbosity level (only error messages as default)
                                             !   0 = error messages only
                                             !   1 = errors and warnings
                                             !   2 = errors, warnings and remarks
