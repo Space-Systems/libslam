@@ -69,18 +69,18 @@ module slam_error_handling
 
   integer :: errorLanguage = ENGLISH   ! english language as default
 
-  character(len=*), dimension(nlangs), parameter :: C_DEBUG_MSG = (/'DEBUG          ', &
+  character(len=*), dimension(nlangs), parameter, public :: C_DEBUG_MSG = (/'DEBUG          ', &
                                                                     'DEBUG-NACHRICHT'/)
 
-  character(len=*), dimension(nlangs), parameter :: C_FATAL   = (/'FATAL          ', &
+  character(len=*), dimension(nlangs), parameter, public :: C_FATAL   = (/'FATAL          ', &
                                                                   'SCHWERER FEHLER'/)
-  character(len=*), dimension(nlangs), parameter :: C_REMARK  = (/'INFO   ', &
+  character(len=*), dimension(nlangs), parameter, public :: C_REMARK  = (/'INFO   ', &
                                                                   'HINWEIS'/)
-  character(len=*), dimension(nlangs), parameter :: C_WARNING = (/'WARN   ', &
+  character(len=*), dimension(nlangs), parameter, public :: C_WARNING = (/'WARN   ', &
                                                                   'WARNUNG'/)
-  character(len=*), dimension(nlangs), parameter :: C_TERMINATED = (/'+++ PROGRAM TERMINATED +++', &
+  character(len=*), dimension(nlangs), parameter, public :: C_TERMINATED = (/'+++ PROGRAM TERMINATED +++', &
                                                                      '+++ PROGRAMM BEENDET +++  '/)
-  character(len=*), dimension(nlangs), parameter :: C_TRACEBACK  = (/'Traceback', &
+  character(len=*), dimension(nlangs), parameter, public :: C_TRACEBACK  = (/'Traceback', &
                                                                      'Traceback'/)
   !** verbosity
 
@@ -219,6 +219,7 @@ module slam_error_handling
   public :: initErrorHandler
   public :: isControlled
   public :: isSetErrorHandling
+  public :: compile_log_record
   public :: getErrorMessage
   public :: setControlled
   public :: setErrorLanguage
