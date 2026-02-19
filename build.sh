@@ -27,13 +27,13 @@ elif [[ "$OSTYPE" == "msys"* ]]; then
   LIBSUFFIX="dll"
   GENERATOR_FLAGS="-G MSYS Makefiles"
 fi
-git submodule update --init --recursive 
 ################################################################################
 #                                                                              #
 #                                Build pFUnit                                  #
 #                                                                              #
 ################################################################################
 if [[ "$ENABLE_PFUNIT" == "ON" ]]; then
+  git submodule update --init --recursive || exit
   cd pFUnit || exit
   # Create the build directory if it does not exist
   if [[ ! -d "build" ]]; then
@@ -43,7 +43,7 @@ if [[ "$ENABLE_PFUNIT" == "ON" ]]; then
   fi
   cd build || exit
   echo "Updating cmake"
-  export PFUNIT_DIR=..//pFUnit/build/installed
+  export PFUNIT_DIR=../pFUnit/build/installed
   export FC=$Fortran_COMPILER
   cmake -DSKIP_MPI=yes "$GENERATOR_FLAGS" ../
   echo "Building pFUnit"
