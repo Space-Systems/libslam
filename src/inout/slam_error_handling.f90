@@ -50,10 +50,10 @@ module slam_error_handling
   integer, parameter, public :: REMARK    =  1     ! remark, meaning that expected results will still be achieved
                                                    ! This message/error type can thus be seen as an information (INFO)
   integer, parameter, public :: DEBUG_MSG =  0     ! debug msg , meaning a message intended to be used for debugging purposes
-  integer, parameter, public :: ERR_UNDEFINED = -1     ! undefined error type
+  integer, parameter, public :: ERR_UNDEFINED = -1 ! undefined error type
 
   integer :: latestError     =  0                  ! indicating the latest error (0 = no error)
-  integer :: latestErrorType =  ERR_UNDEFINED          ! error type undefined as default (equivalent to 'no error occurred yet')
+  integer :: latestErrorType =  ERR_UNDEFINED      ! error type undefined as default (equivalent to 'no error occurred yet')
 
 !$omp threadprivate(latestError,latestErrorType)
 
@@ -242,6 +242,7 @@ module slam_error_handling
   public :: printTrace
   public :: resetError
   public :: resetTrace
+  public :: write_log_message
 
 contains
 
@@ -1317,7 +1318,8 @@ end subroutine resetTrace
 !==============================================================================
 !
 !>  @brief      Set error code
-!>  @author     Vitali Braun
+!>  @author     Vitali Braun (VB)
+!>  @author     Christopher Kebschull (CHK)
 !!
 !>  @date
 !!              <ul>
@@ -1340,10 +1342,7 @@ subroutine setError(code, err_type, par, errorMessage)
   character(len=*), optional, intent(in)               :: errorMessage
 
   character(len=512)    :: cmess            ! log string
-  character(len=23)     :: timestamp        ! Date and time as string, e.g. 2023-06-20 10:45:07.329
-  character(len=1024)   :: log_record       ! log record, containing timestamp, log type and log message
-  integer, dimension(8) :: date_time_values
-  
+
   integer :: i
 
   !** return if errors have to be ignored
@@ -1379,6 +1378,52 @@ subroutine setError(code, err_type, par, errorMessage)
 
   end if
 
+  if(present(errorMessage)) then
+    cmess = errorMessage
+  else
+    call getErrorMessage(code,cmess)
+  end if
+
+  call write_log_message(err_type, cmess, par)
+
+  if(latestErrorType == FATAL .and. errorAction == ERR_ABORT) then
+
+    !** print calling trace
+    if(tracing) call printTrace()
+
+    !** deallocate stack
+    if(allocated(traceStack))  deallocate(traceStack)
+    if(allocated(frozenStack)) deallocate(frozenStack)
+
+    !** stop program execution with error indicator
+    stop -1
+
+  end if
+
+end subroutine setError
+
+!==============================================================================
+!
+!>  @brief      Report error to CLI and logfile according to err_type and verbosity
+!!
+!>  @author     Christopher Kebschull (CHK)
+!!
+!>  @param[in] err_type   Error type (DEBUG_MSG, REMARK, WARNING, FATAL)
+!>  @param[in] cmess      Log message string
+!>  @param[in] par        (optional) Additional parameters for the message
+!!
+!--------------------------------------------------------------------------
+subroutine write_log_message(err_type, cmess, par)
+
+  integer, intent(in)                                   :: err_type
+  character(len=*), intent(in)                          :: cmess
+  character(len=*), optional, dimension(:), intent(in)  :: par
+
+  character(len=1024)   :: log_record
+  integer               :: i
+  character(len=23)     :: timestamp
+  integer, dimension(8) :: date_time_values
+
   call date_and_time(VALUES=date_time_values)
   write(timestamp,('(i4,2("-",i2.2)," ",2(i2.2,":"),(i2.2,".",i3.3))')) date_time_values(1), &
                                                                         date_time_values(2), &
@@ -1388,36 +1433,21 @@ subroutine setError(code, err_type, par, errorMessage)
                                                                         date_time_values(7), &
                                                                         date_time_values(8)
 
-  if(present(errorMessage)) then
-    cmess = errorMessage
-  else
-    call getErrorMessage(code,cmess)
-  end if
-
-  !** report error to logfile or cli if requested
   select case(err_type)
-
     case(DEBUG_MSG)
-
       log_record = compile_log_record(timestamp, C_DEBUG_MSG(errorLanguage), ' - ', cmess)
       latestErrorType = DEBUG_MSG
       if (cli_verbosity >= DEBUG_MSGS) then    ! CLI output
-
         write(*,'(a)') trim(log_record)
-
       end if
 
       if (log_verbosity >= DEBUG_MSGS .and. flag_ichlog) then    ! logfile output
-
         write(ichlog,'(a)') trim(log_record)
-
       end if
 
     case(REMARK)
-
       latestErrorType = REMARK
       if (cli_verbosity >= REMARKS) then    ! CLI output
-
         ! Prepare the message based on the optional parameter or the predefined message
         if(present(par)) then
             log_record = compile_log_record(timestamp, C_REMARK(errorLanguage), ': ', '')
@@ -1433,11 +1463,9 @@ subroutine setError(code, err_type, par, errorMessage)
           log_record = compile_log_record(timestamp, C_REMARK(errorLanguage), ' - ', cmess)
           write(*,'(a)') trim(log_record)
         end if
-
       end if
 
       if (log_verbosity >= REMARKS .and. flag_ichlog) then    ! logfile output
-
         ! Prepare the message based on the optional parameter or the predefined message
         if(present(par)) then
             log_record = compile_log_record(timestamp, C_REMARK(errorLanguage), ': ', '')
@@ -1457,7 +1485,6 @@ subroutine setError(code, err_type, par, errorMessage)
       end if
 
     case(WARNING)
-
       latestErrorType = WARNING
       if (cli_verbosity >= WARNINGS) then    ! CLI output
 
@@ -1476,11 +1503,9 @@ subroutine setError(code, err_type, par, errorMessage)
           log_record = compile_log_record(timestamp, C_WARNING(errorLanguage), ' - ', cmess)
           write(*,'(a)') trim(log_record)
         end if
-
       end if
 
       if (log_verbosity >= WARNINGS .and. flag_ichlog) then    ! logfile output
-
         ! Prepare the message based on the optional parameter or the predefined message
         if(present(par)) then
             log_record = compile_log_record(timestamp, C_WARNING(errorLanguage), ': ', '')
@@ -1496,45 +1521,23 @@ subroutine setError(code, err_type, par, errorMessage)
           log_record = compile_log_record(timestamp, C_WARNING(errorLanguage), ' - ', cmess)
           write(ichlog,'(a)') trim(log_record)
         end if
-
       end if
 
     case(FATAL)
-
       log_record = compile_log_record(timestamp, C_FATAL(errorLanguage), ' - ', cmess)
       latestErrorType = FATAL
       if (cli_verbosity >= ERRORS) then    ! CLI output
         write(*,'(a)') trim(log_record)
         if(errorAction == ERR_ABORT) write(*,'(a)') '  '//C_TERMINATED(errorLanguage)
-
       end if
 
       if (log_verbosity >= ERRORS .and. flag_ichlog) then    ! logfile output
         write(ichlog,'(a)') trim(log_record)
         if(errorAction == ERR_ABORT) write(ichlog,'(a)') '  '//C_TERMINATED(errorLanguage)
-
       end if
-
   end select
 
-
-  if(latestErrorType == FATAL .and. errorAction == ERR_ABORT) then
-
-    !** print calling trace
-    if(tracing) call printTrace()
-
-    !** deallocate stack
-    if(allocated(traceStack))  deallocate(traceStack)
-    if(allocated(frozenStack)) deallocate(frozenStack)
-
-    !** stop program execution with error indicator
-    stop -1
-
-  end if
-
-  return
-
-end subroutine setError
+end subroutine write_log_message
 
 !==============================================================================
 !
