@@ -71,8 +71,7 @@ module slam_error_handling
 
   character(len=*), dimension(nlangs), parameter, public :: C_DEBUG_MSG = (/'DEBUG          ', &
                                                                     'DEBUG-NACHRICHT'/)
-
-  character(len=*), dimension(nlangs), parameter, public :: C_FATAL   = (/'FATAL          ', &
+  character(len=*), dimension(nlangs), parameter, public :: C_FATAL   = (/'ERROR          ', &
                                                                   'SCHWERER FEHLER'/)
   character(len=*), dimension(nlangs), parameter, public :: C_REMARK  = (/'INFO   ', &
                                                                   'HINWEIS'/)
@@ -355,6 +354,8 @@ subroutine initErrorHandler(control, errAction, language, verbLog, verbCli, logf
         itemp = setLogVerbosity(WARNINGS)
       case('REMARKS')
         itemp = setLogVerbosity(REMARKS)
+      case('DEBUG_MSGS')
+        itemp = setLogVerbosity(DEBUG_MSGS)
       case default
         itemp = setLogVerbosity(ALL_MSG)
     end select
@@ -373,6 +374,8 @@ subroutine initErrorHandler(control, errAction, language, verbLog, verbCli, logf
         itemp = setCliVerbosity(WARNINGS)
       case('REMARKS')
         itemp = setCliVerbosity(REMARKS)
+      case('DEBUG_MSGS')
+        itemp = setCliVerbosity(DEBUG_MSGS)
       case default
         itemp = setCliVerbosity(ALL_MSG)
     end select
@@ -1435,7 +1438,7 @@ subroutine write_log_message(err_type, cmess, par)
 
   select case(err_type)
     case(DEBUG_MSG)
-      log_record = compile_log_record(timestamp, C_DEBUG_MSG(errorLanguage), ' - ', cmess)
+      log_record = compile_log_record(timestamp, DEBUG_MSG, ' - ', cmess)
       latestErrorType = DEBUG_MSG
       if (cli_verbosity >= DEBUG_MSGS) then    ! CLI output
         write(*,'(a)') trim(log_record)
@@ -1450,7 +1453,7 @@ subroutine write_log_message(err_type, cmess, par)
       if (cli_verbosity >= REMARKS) then    ! CLI output
         ! Prepare the message based on the optional parameter or the predefined message
         if(present(par)) then
-            log_record = compile_log_record(timestamp, C_REMARK(errorLanguage), ': ', '')
+            log_record = compile_log_record(timestamp, REMARK, ': ', '')
             write(*,'(a)') trim(log_record)
             do i = 1, SIZE_ERROR_PARAMETER
                 if(i <= size(par)) then
@@ -1460,7 +1463,7 @@ subroutine write_log_message(err_type, cmess, par)
                 end if
             end do
         else
-          log_record = compile_log_record(timestamp, C_REMARK(errorLanguage), ' - ', cmess)
+          log_record = compile_log_record(timestamp, REMARK, ' - ', cmess)
           write(*,'(a)') trim(log_record)
         end if
       end if
@@ -1468,7 +1471,7 @@ subroutine write_log_message(err_type, cmess, par)
       if (log_verbosity >= REMARKS .and. flag_ichlog) then    ! logfile output
         ! Prepare the message based on the optional parameter or the predefined message
         if(present(par)) then
-            log_record = compile_log_record(timestamp, C_REMARK(errorLanguage), ': ', '')
+            log_record = compile_log_record(timestamp, REMARK, ': ', '')
             write(ichlog,'(a)') trim(log_record)
             do i = 1, SIZE_ERROR_PARAMETER
                 if(i <= size(par)) then
@@ -1478,7 +1481,7 @@ subroutine write_log_message(err_type, cmess, par)
                 end if
             end do
         else
-          log_record = compile_log_record(timestamp, C_REMARK(errorLanguage), ' - ', cmess)
+          log_record = compile_log_record(timestamp, REMARK, ' - ', cmess)
           write(ichlog,'(a)') trim(log_record)
         end if
 
@@ -1490,7 +1493,7 @@ subroutine write_log_message(err_type, cmess, par)
 
         ! Prepare the message based on the optional parameter or the predefined message
         if(present(par)) then
-            log_record = compile_log_record(timestamp, C_WARNING(errorLanguage), ': ', '')
+            log_record = compile_log_record(timestamp, WARNING, ': ', '')
             write(*,'(a)') trim(log_record)
             do i = 1, SIZE_ERROR_PARAMETER
                 if(i <= size(par)) then
@@ -1500,7 +1503,7 @@ subroutine write_log_message(err_type, cmess, par)
                 end if
             end do
         else
-          log_record = compile_log_record(timestamp, C_WARNING(errorLanguage), ' - ', cmess)
+          log_record = compile_log_record(timestamp, WARNING, ' - ', cmess)
           write(*,'(a)') trim(log_record)
         end if
       end if
@@ -1508,7 +1511,7 @@ subroutine write_log_message(err_type, cmess, par)
       if (log_verbosity >= WARNINGS .and. flag_ichlog) then    ! logfile output
         ! Prepare the message based on the optional parameter or the predefined message
         if(present(par)) then
-            log_record = compile_log_record(timestamp, C_WARNING(errorLanguage), ': ', '')
+            log_record = compile_log_record(timestamp, WARNING, ': ', '')
             write(ichlog,'(a)') trim(log_record)
             do i = 1, SIZE_ERROR_PARAMETER
                 if(i <= size(par)) then
@@ -1518,13 +1521,13 @@ subroutine write_log_message(err_type, cmess, par)
                 end if
             end do
         else
-          log_record = compile_log_record(timestamp, C_WARNING(errorLanguage), ' - ', cmess)
+          log_record = compile_log_record(timestamp, WARNING, ' - ', cmess)
           write(ichlog,'(a)') trim(log_record)
         end if
       end if
 
     case(FATAL)
-      log_record = compile_log_record(timestamp, C_FATAL(errorLanguage), ' - ', cmess)
+      log_record = compile_log_record(timestamp, FATAL, ' - ', cmess)
       latestErrorType = FATAL
       if (cli_verbosity >= ERRORS) then    ! CLI output
         write(*,'(a)') trim(log_record)
@@ -1557,14 +1560,26 @@ end subroutine write_log_message
 !>  @result  log_record      Compilation of timestamp, message type and message
 !!
 !--------------------------------------------------------------------------
-function compile_log_record(timestamp, log_type, separator, message) result(log_record)
+function compile_log_record(timestamp, log_level, separator, message) result(log_record)
 
   character(len=23),intent(in)                    :: timestamp        ! Date and time as string, e.g. 2023-06-20 10:45:07.329
-  character(len=*), intent(in)                    :: log_type         ! Log type as string, e.g. DEBUG, WARNING, ...
+  integer,          intent(in)                    :: log_level        ! Log level as integer
   character(len=*), intent(in)                    :: separator        ! Separator characters between log type and log message
   character(len=*), intent(in)                    :: message          ! Log message string
 
+  character(LEN=9)      :: log_type                                   ! Log type as string, e.g. DEBUG, WARNING, ...
   character(len=1024)   :: log_record                                 ! Compilation of timestamp, message type and message
+
+  select case(log_level)
+  case(FATAL)
+    log_type = 'ERROR'
+  case(WARNING)
+    log_type = 'WARNING'
+  case(REMARK)
+    log_type = 'INFO'
+  case(DEBUG_MSG)
+    log_type = 'DEBUG'
+  end select
 
   if((controlled .or. tracing) .and. stackCounter /= 0) then
     log_record = timestamp//' '//'['//trim(traceStack(stackCounter))//'] '//trim(log_type)//separator//trim(message)

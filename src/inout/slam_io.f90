@@ -1176,31 +1176,34 @@ subroutine slam_message (cmess, imode, err_type)
     log_level = REMARK
   end if
 
-  !** IF logfile is to be used and is not yet open
-  if ((imode == LOGFILE .or. imode == LOG_AND_STDOUT) .and. getLogfileChannel() <= 0) then
-    !** open logfile
-    ierr = setLogFileChannel(openFile(getLogfileName(),SEQUENTIAL,OUT_FORMATTED_OVERWRITE))
-  end if
+  if (getLogVerbosity() >= log_level .or. getCliVerbosity() >= log_level) then
 
-  call date_and_time(VALUES=date_time_values)
-  write(timestamp,('(i4,2("-",i2.2)," ",2(i2.2,":"),(i2.2,".",i3.3))')) date_time_values(1), &
-                                                                        date_time_values(2), &
-                                                                        date_time_values(3), &
-                                                                        date_time_values(5), &
-                                                                        date_time_values(6), &
-                                                                        date_time_values(7), &
-                                                                        date_time_values(8)
+    !** IF logfile is to be used and is not yet open
+    if ((imode == LOGFILE .or. imode == LOG_AND_STDOUT) .and. getLogfileChannel() <= 0) then
+      !** open logfile
+      ierr = setLogFileChannel(openFile(getLogfileName(),SEQUENTIAL,OUT_FORMATTED_OVERWRITE))
+    end if
 
-  log_record = compile_log_record(timestamp, C_REMARK(getErrorLanguage()), ': ', cmess)
+    call date_and_time(VALUES=date_time_values)
+    write(timestamp,('(i4,2("-",i2.2)," ",2(i2.2,":"),(i2.2,".",i3.3))')) date_time_values(1), &
+                                                                          date_time_values(2), &
+                                                                          date_time_values(3), &
+                                                                          date_time_values(5), &
+                                                                          date_time_values(6), &
+                                                                          date_time_values(7), &
+                                                                          date_time_values(8)
 
-  !** make output to logfile (if requested)
-  if ((imode == LOGFILE .or. imode == LOG_AND_STDOUT) .and. getLogVerbosity() > log_level) then
-    write (getLogfileChannel(),'(A)') trim(log_record)
-  end if
+    log_record = compile_log_record(timestamp, log_level, ': ', cmess)
 
-  !** make output to stdout (if requested)
-  if ((imode == LOG_AND_STDOUT .or. imode == STDOUT) .and. getCliVerbosity() > log_level) then
-    write (*,'(A)') trim(log_record)
+    !** make output to logfile (if requested)
+    if ((imode == LOGFILE .or. imode == LOG_AND_STDOUT)) then
+      write (getLogfileChannel(),'(A)') trim(log_record)
+    end if
+
+    !** make output to stdout (if requested)
+    if ((imode == LOG_AND_STDOUT .or. imode == STDOUT)) then
+      write (*,'(A)') trim(log_record)
+    end if
   end if
 
   if(isControlled()) then
