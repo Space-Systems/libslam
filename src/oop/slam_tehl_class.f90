@@ -219,7 +219,7 @@ contains
     character(len = *), intent(in) :: message
     integer, intent(in) :: slam_message_type
 
-    call setError(E_SPECIAL, slam_message_type, (/ message /))
+    call setError(code=E_SPECIAL, err_type=slam_message_type, errorMessage=message)
 
     !** save message
     call this%set_current_state_and_msg(slam_message_type, message)

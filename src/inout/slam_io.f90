@@ -1134,6 +1134,7 @@ end subroutine nxtxmlcontent
 !> @brief     Managing general messages
 !!
 !> @author    Vitali Braun
+!> @anchor    Christopher Kebschull
 !! @version   1.0
 !!
 !> @param[in]  cmess   Message text given by calling routine
@@ -1143,63 +1144,75 @@ end subroutine nxtxmlcontent
 !!                       <li>  1 = both to stdout and logfile </li>
 !!                       <li>  2 = to stdout only             </li>
 !!                     </ul>
-
-subroutine slam_message  ( cmess, imode)
+!!
+!==============================================================================
+subroutine slam_message (cmess, imode, err_type)
 
   !** declaration of formal parameter list variables
   !---------------------------------------------------------
-  integer, intent(in)          :: imode
-  character(len=*), intent(in) :: cmess
+  integer, intent(in)           :: imode
+  character(len=*), intent(in)  :: cmess
+  integer, intent(in), optional :: err_type
   !---------------------------------------------------------
-
 
   !** declaration of local parameters
   character(len=*), parameter :: csubid = 'slam_message'
-  integer, parameter :: klnw = 260   ! line width (number of characters per line)
 
   !** declaration of local variables
-  character(len=klnw), dimension(mln) :: cln ! line buffer array
-  integer :: ierr                            ! error flag
-  integer :: iline                           ! line number loop counter
-  integer :: nline                           ! number of lines found by function breakLine
+  integer :: ierr                           ! error flag
+  character(len=23)     :: timestamp        ! Date and time as string, e.g. 2023-06-20 10:45:07.329
+  character(len=1024)   :: log_record       ! log record, containing timestamp, log type and log message
+  integer, dimension(8) :: date_time_values
+  integer               :: log_level        ! log level
 
-  !** START
    if(isControlled()) then
     if(hasToReturn()) return
     call checkIn(csubid)
   end if
 
- !** IF logfile is to be used and is not yet open
-  if ((imode == LOGFILE .or. imode == LOG_AND_STDOUT) .and. getLogfileChannel() <= 0) then
-    !** open logfile
-    ierr = setLogFileChannel(openFile(getLogfileName(),SEQUENTIAL,OUT_FORMATTED_OVERWRITE))
+  if (present(err_type)) then
+    log_level = err_type
+  else
+    log_level = REMARK
   end if
 
-  !** break message into multiple lines if necessary
-  nline = breakLine(cmess,klnw,cln)
+  if (getLogVerbosity() >= log_level .or. getCliVerbosity() >= log_level) then
 
-  !** make output to logfile (if requested)
-  if ((imode == LOGFILE .or. imode == LOG_AND_STDOUT) .and. getLogVerbosity() /= QUIET) then
-    do iline = 1,nline
-      write (getLogfileChannel(),'(A)') trim(cln(iline))
-    end do
-  end if
+    !** IF logfile is to be used and is not yet open
+    if ((imode == LOGFILE .or. imode == LOG_AND_STDOUT) .and. getLogfileChannel() <= 0) then
+      !** open logfile
+      ierr = setLogFileChannel(openFile(getLogfileName(),SEQUENTIAL,OUT_FORMATTED_OVERWRITE))
+    end if
 
-  !** make output to stdout (if requested)
-  if ((imode == LOG_AND_STDOUT .or. imode == STDOUT) .and. getCliVerbosity() /= QUIET) then
-    do iline = 1,nline
-      write (*,'(A)') trim(cln(iline))
-    end do
+    call date_and_time(VALUES=date_time_values)
+    write(timestamp,('(i4,2("-",i2.2)," ",2(i2.2,":"),(i2.2,".",i3.3))')) date_time_values(1), &
+                                                                          date_time_values(2), &
+                                                                          date_time_values(3), &
+                                                                          date_time_values(5), &
+                                                                          date_time_values(6), &
+                                                                          date_time_values(7), &
+                                                                          date_time_values(8)
+
+    log_record = compile_log_record(timestamp, log_level, ': ', cmess)
+
+    !** make output to logfile (if requested)
+    if ((imode == LOGFILE .or. imode == LOG_AND_STDOUT)) then
+      write (getLogfileChannel(),'(A)') trim(log_record)
+    end if
+
+    !** make output to stdout (if requested)
+    if ((imode == LOG_AND_STDOUT .or. imode == STDOUT)) then
+      write (*,'(A)') trim(log_record)
+    end if
   end if
 
   if(isControlled()) then
     call checkOut(csubid)
   end if
 
-  return
-
 end subroutine slam_message
- !==============================================================================
+
+!==============================================================================
 !
 !> @brief     Break string into multiple lines
 !!

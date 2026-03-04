@@ -32,3 +32,11 @@ LINK_LIBRARIES slam-Fortran)
 add_pfunit_ctest (slam_strings_test
 TEST_SOURCES test_slamstrings.pf
 LINK_LIBRARIES slam-Fortran)
+
+add_pfunit_ctest (slam_error_handling_test
+    TEST_SOURCES test_slam_error_handling.pf
+    LINK_LIBRARIES slam-Fortran)
+
+add_pfunit_ctest (slam_io_test
+    TEST_SOURCES test_slam_io.pf
+    LINK_LIBRARIES slam-Fortran)

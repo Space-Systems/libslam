@@ -1,0 +1,149 @@
+!==============================================================================
+!
+!> @anchor  test_slam_io
+!!
+!> @brief   pFUnit tests for slam_io (sprint, parse_from_fid)
+!!
+!------------------------------------------------------------------------
+module test_slam_io
+    use funit
+    use slam_io, only: &
+        openFile, closeFile, parse_from_fid, sprint, message, &
+        SEQUENTIAL, IN_FORMATTED, OUT_FORMATTED_OVERWRITE, &
+        STDOUT, LOG_AND_STDOUT, LOGFILE
+    use slam_error_handling, only: initErrorHandler, getLatestError, resetError
+    use slam_types, only: dp
+    implicit none
+
+    character(*), parameter :: TEST_FILE = 'test_slam_io_parse.tmp'
+
+contains
+
+    !--------  message --------
+    @test
+    subroutine test_message_stdout()
+        call message('test message to stdout', STDOUT)
+    end subroutine test_message_stdout
+
+    @test
+    subroutine test_message_log_and_stdout()
+        call message('test message to both', LOG_AND_STDOUT)
+    end subroutine test_message_log_and_stdout
+
+    @test
+    subroutine test_message_logfile_only()
+        call message('test message to logfile only', LOGFILE)
+    end subroutine test_message_logfile_only
+
+    !--------  sprint --------
+    @test
+    subroutine test_sprint_integer()
+        @assertEqual('7', trim(sprint(7, 'I1')))
+        @assertEqual('007', trim(sprint(7, 'I3.3')))
+    end subroutine test_sprint_integer
+
+    @test
+    subroutine test_sprint_real()
+        @assertEqual('7.1', trim(sprint(7.1, 'F3.1')))
+        @assertEqual('7.10', trim(sprint(7.1_dp, 'F4.2')))
+    end subroutine test_sprint_real
+
+    @test
+    subroutine test_sprint_character()
+        @assertEqual('  x', trim(sprint('x', 'A3')))
+    end subroutine test_sprint_character
+
+    @test
+    subroutine test_sprint_invalid_format_fails()
+        character(len=20) :: dummy
+        call initErrorHandler(control='YES', errAction='RETURN')
+        dummy = sprint(7, 'F4.1')
+        @assertTrue(getLatestError() /= 0)
+        call resetError()
+    end subroutine test_sprint_invalid_format_fails
+
+    @test
+    subroutine test_sprint_real_as_integer_fails()
+        character(len=20) :: dummy
+        call initErrorHandler(control='YES', errAction='RETURN')
+        dummy = sprint(7.1_dp, 'I3.3')
+        @assertTrue(getLatestError() /= 0)
+        call resetError()
+    end subroutine test_sprint_real_as_integer_fails
+
+    !--------  parse_from_fid --------
+    @test
+    subroutine test_parse_from_fid_real_integer()
+        integer :: fid
+        real(dp) :: value_real
+        integer  :: value_int
+        fid = create_parse_test_file()
+        fid = openFile(TEST_FILE, SEQUENTIAL, IN_FORMATTED)
+        call parse_from_fid(fid, '#', value_real, 'real(DP)')
+        @assertRelativelyEqual(12.50_dp, value_real, tolerance=1.0e-12_dp)
+        call parse_from_fid(fid, '#', value_int, 'integer')
+        @assertEqual(7, value_int)
+        fid = closeFile(fid)
+    end subroutine test_parse_from_fid_real_integer
+
+    @test
+    subroutine test_parse_from_fid_logical_string()
+        integer :: fid
+        real(dp) :: value_real
+        integer  :: value_int
+        logical  :: value_log
+        character(len=17) :: value_char
+        fid = create_parse_test_file()
+        fid = openFile(TEST_FILE, SEQUENTIAL, IN_FORMATTED)
+        call parse_from_fid(fid, '#', value_real, 'real(DP)')
+        call parse_from_fid(fid, '#', value_int, 'integer')
+        call parse_from_fid(fid, '#', value_log, 'logical true')
+        @assertTrue(value_log)
+        call parse_from_fid(fid, '#', value_log, 'logical false')
+        @assertFalse(value_log)
+        call parse_from_fid(fid, '#', value_char, 'short string')
+        @assertEqual('String', trim(value_char))
+        fid = closeFile(fid)
+    end subroutine test_parse_from_fid_logical_string
+
+    @test
+    subroutine test_parse_from_fid_invalid_raises_error()
+        integer :: fid
+        real(dp) :: value_real
+        integer  :: value_int
+        logical  :: value_log
+        character(len=80) :: value_char
+        fid = create_parse_test_file()
+        fid = openFile(TEST_FILE, SEQUENTIAL, IN_FORMATTED)
+        call initErrorHandler(control='YES', errAction='RETURN')
+        ! Skip to line "12.50  # real(DP) parsed as integer (should fail)"
+        call parse_from_fid(fid, '#', value_real, 'real(DP)')
+        call parse_from_fid(fid, '#', value_int, 'integer')
+        call parse_from_fid(fid, '#', value_log, 'logical true')
+        call parse_from_fid(fid, '#', value_log, 'logical false')
+        call parse_from_fid(fid, '#', value_char, 'short string')
+        call parse_from_fid(fid, '#', value_char, 'long string')
+        call parse_from_fid(fid, '#', value_char, 'long string with comment')
+        call parse_from_fid(fid, '#', value_real, 'integer parsed as real(DP)')
+        call parse_from_fid(fid, '#', value_int, 'real(DP) parsed as integer')
+        @assertTrue(getLatestError() /= 0)
+        call resetError()
+        fid = closeFile(fid)
+    end subroutine test_parse_from_fid_invalid_raises_error
+
+    integer function create_parse_test_file()
+        integer :: u
+        u = openFile(TEST_FILE, SEQUENTIAL, OUT_FORMATTED_OVERWRITE)
+        write(u, '(A)') '12.50  # real(DP)'
+        write(u, '(A)') '7      # integer'
+        write(u, '(A)') 'T      # logical true (string)'
+        write(u, '(A)') 'F      # logical false (string)'
+        write(u, '(A)') "'String'           # short string"
+        write(u, '(A)') "'This is a string' # long string"
+        write(u, '(A)') "'This is an entire line # long string with comment'"
+        write(u, '(A)') '7      # integer parsed as real(DP)'
+        write(u, '(A)') '12.50  # real(DP) parsed as integer (should fail)'
+        create_parse_test_file = closeFile(u)
+    end function create_parse_test_file
+
+end module test_slam_io

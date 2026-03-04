@@ -465,7 +465,7 @@ module test_slamreduction
         ! Test case 1 : LEO
         r_ef = (/-3485.799126707284, -5898.652976745232, 835.9701786284777/) 
         v_ef = (/-1.3525457950562447, -0.2804534841971075, -7.4721873681232385/)
-        mjd = 	59868.16721065_dp
+        mjd = 59868.16721065_dp
 
         ! Call the subroutine to be tested
         call reduction_model%earthFixed2inertial_rv(r_ef, v_ef, mjd, r_inr, v_inr)

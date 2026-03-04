@@ -1,0 +1,106 @@
+!==============================================================================
+!
+!> @anchor  test_slam_error_handling
+!!
+!> @brief   pFUnit tests for slam_error_handling (language/verbosity, setError, compile_log_record)
+!!
+!------------------------------------------------------------------------
+module test_slam_error_handling
+    use funit
+    use slam_error_handling
+    implicit none
+
+    ! Language constants (match module: 1=ENGLISH, 2=GERMAN)
+    integer, parameter :: LANG_ENGLISH = 1
+    integer, parameter :: LANG_GERMAN  = 2
+
+contains
+
+    @test
+    subroutine test_setErrorLanguage_getErrorLanguage()
+        integer :: prev
+        prev = setErrorLanguage(LANG_GERMAN)
+        @assertEqual(LANG_GERMAN, getErrorLanguage())
+        prev = setErrorLanguage(LANG_ENGLISH)
+        @assertEqual(LANG_ENGLISH, getErrorLanguage())
+    end subroutine test_setErrorLanguage_getErrorLanguage
+
+    @test
+    subroutine test_setCliVerbosity_getCliVerbosity()
+        integer :: junk
+        junk = setCliVerbosity(WARNINGS)
+        @assertEqual(WARNINGS, getCliVerbosity())
+        junk = setCliVerbosity(ERRORS)
+        @assertEqual(ERRORS, getCliVerbosity())
+    end subroutine test_setCliVerbosity_getCliVerbosity
+
+    @test
+    subroutine test_setLogVerbosity_getLogVerbosity()
+        integer :: junk
+        junk = setLogVerbosity(REMARKS)
+        @assertEqual(REMARKS, getLogVerbosity())
+        junk = setLogVerbosity(QUIET)
+        @assertEqual(QUIET, getLogVerbosity())
+    end subroutine test_setLogVerbosity_getLogVerbosity
+
+    @test
+    subroutine test_setError_report_updates_latest_error()
+        call initErrorHandler(errAction='REPORT')
+        call setError(E_FILE_NOT_FOUND, WARNING, errorMessage='test message')
+        @assertEqual(E_FILE_NOT_FOUND, getLatestError())
+        @assertEqual(WARNING, getLatestErrorType())
+    end subroutine test_setError_report_updates_latest_error
+
+    @test
+    subroutine test_setError_fatal_hasFailed()
+        call initErrorHandler(errAction='REPORT')
+        call setError(E_FILE_NOT_FOUND, FATAL, errorMessage='fatal test')
+        @assertEqual(FATAL, getLatestErrorType())
+        @assertTrue(hasFailed())
+    end subroutine test_setError_fatal_hasFailed
+
+    @test
+    subroutine test_setError_remark_type()
+        call initErrorHandler(errAction='REPORT')
+        call setError(E_STRING_LENGTH, REMARK, errorMessage='remark')
+        @assertEqual(E_STRING_LENGTH, getLatestError())
+        @assertEqual(REMARK, getLatestErrorType())
+    end subroutine test_setError_remark_type
+
+    @test
+    subroutine test_setError_debug_msg_type()
+        call initErrorHandler(errAction='REPORT')
+        call setError(E_UNKNOWN_PARAMETER, DEBUG_MSG, errorMessage='debug')
+        @assertEqual(E_UNKNOWN_PARAMETER, getLatestError())
+        @assertEqual(DEBUG_MSG, getLatestErrorType())
+    end subroutine test_setError_debug_msg_type
+
+    @test
+    subroutine test_resetError_clears_latest()
+        call initErrorHandler(errAction='REPORT')
+        call setError(E_FILE_NOT_FOUND, WARNING, errorMessage='x')
+        call resetError()
+        @assertEqual(0, getLatestError())
+        @assertEqual(ERR_UNDEFINED, getLatestErrorType())
+    end subroutine test_resetError_clears_latest
+
+    @test
+    subroutine test_compile_log_record_format()
+        character(len=23)   :: timestamp
+        character(len=1024) :: rec
+        timestamp = '2024-01-15 10:30:00.000'
+        rec = compile_log_record(timestamp, 2, ' - ', 'test message')
+        @assertTrue(len_trim(rec) > 0)
+        @assertTrue(index(trim(rec), '2024-01-15') > 0)
+        @assertTrue(index(trim(rec), 'WARNING') > 0)
+        @assertTrue(index(trim(rec), 'test message') > 0)
+    end subroutine test_compile_log_record_format
+
+    @test
+    subroutine test_getErrorMessage_returns_message()
+        character(len=512) :: msg
+        call getErrorMessage(E_FILE_NOT_FOUND, msg)
+        @assertTrue(len_trim(msg) > 0)
+    end subroutine test_getErrorMessage_returns_message
+
+end module test_slam_error_handling

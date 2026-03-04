@@ -50,10 +50,10 @@ module slam_error_handling
   integer, parameter, public :: REMARK    =  1     ! remark, meaning that expected results will still be achieved
                                                    ! This message/error type can thus be seen as an information (INFO)
   integer, parameter, public :: DEBUG_MSG =  0     ! debug msg , meaning a message intended to be used for debugging purposes
-  integer, parameter, public :: ERR_UNDEFINED = -1     ! undefined error type
+  integer, parameter, public :: ERR_UNDEFINED = -1 ! undefined error type
 
   integer :: latestError     =  0                  ! indicating the latest error (0 = no error)
-  integer :: latestErrorType =  ERR_UNDEFINED          ! error type undefined as default (equivalent to 'no error occurred yet')
+  integer :: latestErrorType =  ERR_UNDEFINED      ! error type undefined as default (equivalent to 'no error occurred yet')
 
 !$omp threadprivate(latestError,latestErrorType)
 
@@ -69,18 +69,17 @@ module slam_error_handling
 
   integer :: errorLanguage = ENGLISH   ! english language as default
 
-  character(len=*), dimension(nlangs), parameter :: C_DEBUG_MSG = (/'DEBUG MSG      ', &
+  character(len=*), dimension(nlangs), parameter, public :: C_DEBUG_MSG = (/'DEBUG          ', &
                                                                     'DEBUG-NACHRICHT'/)
-
-  character(len=*), dimension(nlangs), parameter :: C_FATAL   = (/'FATAL ERROR    ', &
+  character(len=*), dimension(nlangs), parameter, public :: C_FATAL   = (/'ERROR          ', &
                                                                   'SCHWERER FEHLER'/)
-  character(len=*), dimension(nlangs), parameter :: C_REMARK  = (/'REMARK ', &
+  character(len=*), dimension(nlangs), parameter, public :: C_REMARK  = (/'INFO   ', &
                                                                   'HINWEIS'/)
-  character(len=*), dimension(nlangs), parameter :: C_WARNING = (/'WARNING', &
+  character(len=*), dimension(nlangs), parameter, public :: C_WARNING = (/'WARN   ', &
                                                                   'WARNUNG'/)
-  character(len=*), dimension(nlangs), parameter :: C_TERMINATED = (/'+++ PROGRAM TERMINATED +++', &
+  character(len=*), dimension(nlangs), parameter, public :: C_TERMINATED = (/'+++ PROGRAM TERMINATED +++', &
                                                                      '+++ PROGRAMM BEENDET +++  '/)
-  character(len=*), dimension(nlangs), parameter :: C_TRACEBACK  = (/'Traceback', &
+  character(len=*), dimension(nlangs), parameter, public :: C_TRACEBACK  = (/'Traceback', &
                                                                      'Traceback'/)
   !** verbosity
 
@@ -91,12 +90,12 @@ module slam_error_handling
   integer, parameter, public :: DEBUG_MSGS =  3       ! print debug msgs, remarks, warnings and errors
   integer, parameter, public :: ALL_MSG    =  4       ! print all messages
 
-  integer :: log_verbosity = ALL_MSG        ! logfile verbosity level (all messages as default
+  integer :: log_verbosity = REMARKS        ! logfile verbosity level (all messages as default
                                             !   0 = error messages only
                                             !   1 = errors and warnings
                                             !   2 = errors, warnings and remarks
                                             !   3 = all messages (incl. file open/close)
-  integer :: cli_verbosity = ERRORS         ! CLI verbosity level (only error messages as default)
+  integer :: cli_verbosity = REMARKS        ! CLI verbosity level (only error messages as default)
                                             !   0 = error messages only
                                             !   1 = errors and warnings
                                             !   2 = errors, warnings and remarks
@@ -219,6 +218,7 @@ module slam_error_handling
   public :: initErrorHandler
   public :: isControlled
   public :: isSetErrorHandling
+  public :: compile_log_record
   public :: getErrorMessage
   public :: setControlled
   public :: setErrorLanguage
@@ -241,6 +241,7 @@ module slam_error_handling
   public :: printTrace
   public :: resetError
   public :: resetTrace
+  public :: write_log_message
 
 contains
 
@@ -353,6 +354,8 @@ subroutine initErrorHandler(control, errAction, language, verbLog, verbCli, logf
         itemp = setLogVerbosity(WARNINGS)
       case('REMARKS')
         itemp = setLogVerbosity(REMARKS)
+      case('DEBUG_MSGS')
+        itemp = setLogVerbosity(DEBUG_MSGS)
       case default
         itemp = setLogVerbosity(ALL_MSG)
     end select
@@ -371,6 +374,8 @@ subroutine initErrorHandler(control, errAction, language, verbLog, verbCli, logf
         itemp = setCliVerbosity(WARNINGS)
       case('REMARKS')
         itemp = setCliVerbosity(REMARKS)
+      case('DEBUG_MSGS')
+        itemp = setCliVerbosity(DEBUG_MSGS)
       case default
         itemp = setCliVerbosity(ALL_MSG)
     end select
@@ -1316,20 +1321,22 @@ end subroutine resetTrace
 !==============================================================================
 !
 !>  @brief      Set error code
-!>  @author     Vitali Braun
+!>  @author     Vitali Braun (VB)
+!>  @author     Christopher Kebschull (CHK)
 !!
 !>  @date
 !!              <ul>
-!!                  <li>VB: 15.05.2016 (added SIZE_ERROR_PARAMETER parameter to loop)</li>
-!!                  <li>VB: 02.07.2016 (added optional error message parameter, to pass messages of upstream tools using slam error handling)</li>
+!!                  <li>VB:  15.05.2016 (added SIZE_ERROR_PARAMETER parameter to loop)</li>
+!!                  <li>VB:  02.07.2016 (added optional error message parameter, to pass messages of upstream tools using slam error handling)</li>
+!!                  <li>CHK: 21.06.2023 (improved for logging with timestamp and formated log type)</li>
 !!              </ul>
 !!
-!>  @param[in] code     Error code
-!>  @param[in] err_type Error type allowing to decide how to recover
-!>  @param[in] par      (optional) string containing additional information
+!>  @param[in] code          Error code
+!>  @param[in] err_type      Error type allowing to decide how to recover
+!>  @param[in] par           (optional) string containing additional information
+!>  @param[in] errorMessage  (optional) Error message, used when par is not passed
 !!
 !--------------------------------------------------------------------------
-
 subroutine setError(code, err_type, par, errorMessage)
 
   integer, intent(in)                                  :: code
@@ -1337,8 +1344,8 @@ subroutine setError(code, err_type, par, errorMessage)
   character(len=*), optional, dimension(:), intent(in) :: par
   character(len=*), optional, intent(in)               :: errorMessage
 
-  character(len=128) :: ctemp     ! temporary string
-  character(len=512) :: cmess     ! message string
+  character(len=512)    :: cmess            ! log string
+
   integer :: i
 
   !** return if errors have to be ignored
@@ -1374,137 +1381,13 @@ subroutine setError(code, err_type, par, errorMessage)
 
   end if
 
-  !** get subroutine in which error occurred, if in tracing mode
-  if((controlled .or. tracing) .and. stackCounter /= 0) then
-    ctemp  = ' in subroutine '//trim(traceStack(stackCounter))
-  else
-    ctemp  = ''
-  end if
-
   if(present(errorMessage)) then
     cmess = errorMessage
   else
     call getErrorMessage(code,cmess)
   end if
 
-
-  !** report error to logfile or cli if requested
-  select case(err_type)
-
-    case(DEBUG_MSG)
-
-      latestErrorType = DEBUG_MSG
-      if (cli_verbosity >= DEBUG_MSGS) then    ! CLI output
-
-        write(*,'(a)') trim(C_DEBUG_MSG(errorLanguage))//':'//trim(ctemp)//':'//trim(cmess)
-
-      end if
-
-      if (log_verbosity >= DEBUG_MSGS .and. flag_ichlog) then    ! logfile output
-
-        write(ichlog,'(a)') trim(C_DEBUG_MSG(errorLanguage))//':'//trim(ctemp)//trim(cmess)//':'
-
-      end if
-
-    case(REMARK)
-
-      latestErrorType = REMARK
-      if (cli_verbosity >= REMARKS) then    ! CLI output
-
-        write(*,'(a)', advance = "no") trim(C_REMARK(errorLanguage))//':'//trim(ctemp)//':'
-        ! Prepare the message based on the optional parameter or the predefined message
-        if(present(par)) then
-            do i = 1, SIZE_ERROR_PARAMETER
-                if(i <= size(par)) then
-                    write(*,'(a)') '  '//trim(errorParameter(i))
-                else
-                    exit
-                end if
-            end do
-        else
-          write(*,'(a)') '  '//trim(cmess)
-        end if
-
-      end if
-
-      if (log_verbosity >= REMARKS .and. flag_ichlog) then    ! logfile output
-
-        write(ichlog,'(a)', advance = "no") trim(C_REMARK(errorLanguage))//':'//trim(ctemp)//':'
-        ! Prepare the message based on the optional parameter or the predefined message
-        if(present(par)) then
-            do i = 1, SIZE_ERROR_PARAMETER
-                if(i <= size(par)) then
-                    write(ichlog,'(a)') '  '//trim(errorParameter(i))
-                else
-                    exit
-                end if
-            end do
-        else
-          write(ichlog,'(a)') '  '//trim(cmess)
-        end if
-
-      end if
-
-    case(WARNING)
-
-      latestErrorType = WARNING
-      if (cli_verbosity >= WARNINGS) then    ! CLI output
-
-        write(*,'(a)', advance = "no") trim(C_WARNING(errorLanguage))//':'//trim(ctemp)//':'
-        ! Prepare the message based on the optional parameter or the predefined message
-        if(present(par)) then
-            do i = 1, SIZE_ERROR_PARAMETER
-                if(i <= size(par)) then
-                    write(*,'(a)') '  '//trim(errorParameter(i))
-                else
-                    exit
-                end if
-            end do
-        else
-          write(*,'(a)') '  '//trim(cmess)
-        end if
-
-      end if
-
-      if (log_verbosity >= WARNINGS .and. flag_ichlog) then    ! logfile output
-
-        write(ichlog,'(a)', advance = "no") trim(C_WARNING(errorLanguage))//':'//trim(ctemp)//':'
-        ! Prepare the message based on the optional parameter or the predefined message
-        if(present(par)) then
-            do i = 1, SIZE_ERROR_PARAMETER
-                if(i <= size(par)) then
-                    write(ichlog,'(a)') '  '//trim(errorParameter(i))
-                else
-                    exit
-                end if
-            end do
-        else
-          write(ichlog,'(a)') '  '//trim(cmess)
-        end if
-
-      end if
-
-    case(FATAL)
-
-      latestErrorType = FATAL
-      if (cli_verbosity >= ERRORS) then    ! CLI output
-
-        write(*,'(a)', advance = "no") trim(C_FATAL(errorLanguage))//':'//trim(ctemp)//':'
-        write(*,'(a)') '  '//trim(cmess)
-        if(errorAction == ERR_ABORT) write(*,'(a)') '  '//C_TERMINATED(errorLanguage)
-
-      end if
-
-      if (log_verbosity >= ERRORS .and. flag_ichlog) then    ! logfile output
-
-        write(ichlog,'(a)', advance = "no") trim(C_FATAL(errorLanguage))//':'//trim(ctemp)//':'
-        write(ichlog,'(a)') '  '//trim(cmess)
-        if(errorAction == ERR_ABORT) write(ichlog,'(a)') '  '//C_TERMINATED(errorLanguage)
-
-      end if
-
-  end select
-
+  call write_log_message(err_type, cmess, par)
 
   if(latestErrorType == FATAL .and. errorAction == ERR_ABORT) then
 
@@ -1520,9 +1403,191 @@ subroutine setError(code, err_type, par, errorMessage)
 
   end if
 
-  return
-
 end subroutine setError
+
+!==============================================================================
+!
+!>  @brief      Report error to CLI and logfile according to err_type and verbosity
+!!
+!>  @author     Christopher Kebschull (CHK)
+!!
+!>  @param[in] err_type   Error type (DEBUG_MSG, REMARK, WARNING, FATAL)
+!>  @param[in] cmess      Log message string
+!>  @param[in] par        (optional) Additional parameters for the message
+!!
+!--------------------------------------------------------------------------
+subroutine write_log_message(err_type, cmess, par)
+
+  integer, intent(in)                                   :: err_type
+  character(len=*), intent(in)                          :: cmess
+  character(len=*), optional, dimension(:), intent(in)  :: par
+
+  character(len=1024)   :: log_record
+  integer               :: i
+  character(len=23)     :: timestamp
+  integer, dimension(8) :: date_time_values
+
+  call date_and_time(VALUES=date_time_values)
+  write(timestamp,('(i4,2("-",i2.2)," ",2(i2.2,":"),(i2.2,".",i3.3))')) date_time_values(1), &
+                                                                        date_time_values(2), &
+                                                                        date_time_values(3), &
+                                                                        date_time_values(5), &
+                                                                        date_time_values(6), &
+                                                                        date_time_values(7), &
+                                                                        date_time_values(8)
+
+  select case(err_type)
+    case(DEBUG_MSG)
+      log_record = compile_log_record(timestamp, DEBUG_MSG, ' - ', cmess)
+      latestErrorType = DEBUG_MSG
+      if (cli_verbosity >= DEBUG_MSGS) then    ! CLI output
+        write(*,'(a)') trim(log_record)
+      end if
+
+      if (log_verbosity >= DEBUG_MSGS .and. flag_ichlog) then    ! logfile output
+        write(ichlog,'(a)') trim(log_record)
+      end if
+
+    case(REMARK)
+      latestErrorType = REMARK
+      if (cli_verbosity >= REMARKS) then    ! CLI output
+        ! Prepare the message based on the optional parameter or the predefined message
+        if(present(par)) then
+            log_record = compile_log_record(timestamp, REMARK, ': ', '')
+            write(*,'(a)') trim(log_record)
+            do i = 1, SIZE_ERROR_PARAMETER
+                if(i <= size(par)) then
+                    write(*,'(a)') '  '//trim(errorParameter(i))
+                else
+                    exit
+                end if
+            end do
+        else
+          log_record = compile_log_record(timestamp, REMARK, ' - ', cmess)
+          write(*,'(a)') trim(log_record)
+        end if
+      end if
+
+      if (log_verbosity >= REMARKS .and. flag_ichlog) then    ! logfile output
+        ! Prepare the message based on the optional parameter or the predefined message
+        if(present(par)) then
+            log_record = compile_log_record(timestamp, REMARK, ': ', '')
+            write(ichlog,'(a)') trim(log_record)
+            do i = 1, SIZE_ERROR_PARAMETER
+                if(i <= size(par)) then
+                    write(ichlog,'(a)') '  '//trim(errorParameter(i))
+                else
+                    exit
+                end if
+            end do
+        else
+          log_record = compile_log_record(timestamp, REMARK, ' - ', cmess)
+          write(ichlog,'(a)') trim(log_record)
+        end if
+
+      end if
+
+    case(WARNING)
+      latestErrorType = WARNING
+      if (cli_verbosity >= WARNINGS) then    ! CLI output
+
+        ! Prepare the message based on the optional parameter or the predefined message
+        if(present(par)) then
+            log_record = compile_log_record(timestamp, WARNING, ': ', '')
+            write(*,'(a)') trim(log_record)
+            do i = 1, SIZE_ERROR_PARAMETER
+                if(i <= size(par)) then
+                    write(*,'(a)') '  '//trim(errorParameter(i))
+                else
+                    exit
+                end if
+            end do
+        else
+          log_record = compile_log_record(timestamp, WARNING, ' - ', cmess)
+          write(*,'(a)') trim(log_record)
+        end if
+      end if
+
+      if (log_verbosity >= WARNINGS .and. flag_ichlog) then    ! logfile output
+        ! Prepare the message based on the optional parameter or the predefined message
+        if(present(par)) then
+            log_record = compile_log_record(timestamp, WARNING, ': ', '')
+            write(ichlog,'(a)') trim(log_record)
+            do i = 1, SIZE_ERROR_PARAMETER
+                if(i <= size(par)) then
+                    write(ichlog,'(a)') '  '//trim(errorParameter(i))
+                else
+                    exit
+                end if
+            end do
+        else
+          log_record = compile_log_record(timestamp, WARNING, ' - ', cmess)
+          write(ichlog,'(a)') trim(log_record)
+        end if
+      end if
+
+    case(FATAL)
+      log_record = compile_log_record(timestamp, FATAL, ' - ', cmess)
+      latestErrorType = FATAL
+      if (cli_verbosity >= ERRORS) then    ! CLI output
+        write(*,'(a)') trim(log_record)
+        if(errorAction == ERR_ABORT) write(*,'(a)') '  '//C_TERMINATED(errorLanguage)
+      end if
+
+      if (log_verbosity >= ERRORS .and. flag_ichlog) then    ! logfile output
+        write(ichlog,'(a)') trim(log_record)
+        if(errorAction == ERR_ABORT) write(ichlog,'(a)') '  '//C_TERMINATED(errorLanguage)
+      end if
+  end select
+
+end subroutine write_log_message
+
+!==============================================================================
+!
+!>  @brief      Compile log record
+!>  @author     Christopher Kebschull
+!!
+!>  @date
+!!              <ul>
+!!                  <li>CHK: 21.06.2023 (initial implementation)</li>
+!!              </ul>
+!!
+!>  @param[in] timestamp     Date and time as string, e.g. 2023-06-20 10:45:07.329
+!>  @param[in] log_type      Log type as string, e.g. DEBUG, WARNING, ...
+!>  @param[in] separator     Separator characters between log type and log message
+!>  @param[in] message       Log message string
+!!
+!>  @result  log_record      Compilation of timestamp, message type and message
+!!
+!--------------------------------------------------------------------------
+function compile_log_record(timestamp, log_level, separator, message) result(log_record)
+
+  character(len=23),intent(in)                    :: timestamp        ! Date and time as string, e.g. 2023-06-20 10:45:07.329
+  integer,          intent(in)                    :: log_level        ! Log level as integer
+  character(len=*), intent(in)                    :: separator        ! Separator characters between log type and log message
+  character(len=*), intent(in)                    :: message          ! Log message string
+
+  character(LEN=9)      :: log_type                                   ! Log type as string, e.g. DEBUG, WARNING, ...
+  character(len=1024)   :: log_record                                 ! Compilation of timestamp, message type and message
+
+  select case(log_level)
+  case(FATAL)
+    log_type = 'ERROR'
+  case(WARNING)
+    log_type = 'WARNING'
+  case(REMARK)
+    log_type = 'INFO'
+  case(DEBUG_MSG)
+    log_type = 'DEBUG'
+  end select
+
+  if((controlled .or. tracing) .and. stackCounter /= 0) then
+    log_record = timestamp//' '//'['//trim(traceStack(stackCounter))//'] '//trim(log_type)//separator//trim(message)
+  else
+    log_record  = timestamp//' '//trim(log_type)//separator//trim(message)
+  end if
+
+end function compile_log_record
 
 !==============================================================================
 !
