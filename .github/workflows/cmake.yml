@@ -23,19 +23,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
+    - name: Cache pFUnit install
+      uses: actions/cache@v4
+      id: pfunit-cache
+      with:
+        path: pFUnit/build/installed
+        key: pfunit-${{ runner.os }}-${{ env.BUILD_TYPE }}-${{ hashFiles('.gitmodules', 'pFUnit/CMakeLists.txt') }}
+        restore-keys: |
+          pfunit-${{ runner.os }}-${{ env.BUILD_TYPE }}-
+
     - name: Configure CMake pFUnit
+      if: steps.pfunit-cache.outputs.cache-hit != 'true'
       # Configure pFUnit
       run: cmake -S pFUnit -B ${{github.workspace}}/pFUnit/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_OpenMP_SUPPORT=OFF -DENABLE_POSTGRESQL_SUPPORT=OFF
 
     - name: Build pFUnit
+      if: steps.pfunit-cache.outputs.cache-hit != 'true'
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/pFUnit/build --config ${{env.BUILD_TYPE}}
 
     - name: Install pFUnit
+      if: steps.pfunit-cache.outputs.cache-hit != 'true'
       # install libs and includes in libslam/build/
       run: cmake --install ${{github.workspace}}/pFUnit/build --config ${{env.BUILD_TYPE}}
 
