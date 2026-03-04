@@ -104,6 +104,9 @@ jobs:
         name: libslam-build
         path: build
 
+    - name: Restore execute permissions on build artifact
+      run: chmod -R a+x build
+
     - name: Run tests
       working-directory: ${{github.workspace}}/build
       run: ctest -C ${{env.BUILD_TYPE}} --verbose --output-junit ../test_report.xml
