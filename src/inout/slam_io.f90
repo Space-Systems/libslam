@@ -1165,11 +1165,6 @@ subroutine slam_message (cmess, imode, err_type)
   integer, dimension(8) :: date_time_values
   integer               :: log_level        ! log level
 
-   if(isControlled()) then
-    if(hasToReturn()) return
-    call checkIn(csubid)
-  end if
-
   if (present(err_type)) then
     log_level = err_type
   else
@@ -1204,10 +1199,6 @@ subroutine slam_message (cmess, imode, err_type)
     if ((imode == LOG_AND_STDOUT .or. imode == STDOUT)) then
       write (*,'(A)') trim(log_record)
     end if
-  end if
-
-  if(isControlled()) then
-    call checkOut(csubid)
   end if
 
 end subroutine slam_message
