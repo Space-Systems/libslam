@@ -43,6 +43,8 @@ module slam_rframes
   integer, parameter :: REF_FRAME_OCRF      = 8      ! Orbit Centered Reference Frame
   integer, parameter :: REF_FRAME_RSW       = 9      ! Radial, Normal and Binormal satellite based system
   integer, parameter :: REF_FRAME_TEME      = 10     ! True Equator Mean Equinox
+  integer, parameter :: REF_FRAME_MCRF      = 11     ! Moon-Centered Reference Frame (inertial, aligned with GCRF)
+  integer, parameter :: REF_FRAME_MOON_FIXED = 12    ! Moon body-fixed rotating frame (IAU 2015)
 
   !================================================
   !
@@ -51,6 +53,7 @@ module slam_rframes
   !-----------------------------------------
   integer, parameter :: FRAME_CENTER_EARTH            = 1      ! Earth
   integer, parameter :: FRAME_CENTER_EARTH_BARYCENTER = 2      ! Earth Barycenter
+  integer, parameter :: FRAME_CENTER_MOON             = 3      ! Moon
 
   !================================================
   !
@@ -59,6 +62,7 @@ module slam_rframes
   !-----------------------------------------
   character(len=*), parameter :: C_FRAME_CENTER_EARTH            = "EARTH"
   character(len=*), parameter :: C_FRAME_CENTER_EARTH_BARYCENTER = "EARTH BARYCENTER"
+  character(len=*), parameter :: C_FRAME_CENTER_MOON             = "MOON"
 
 
   !================================================
@@ -78,8 +82,10 @@ module slam_rframes
   character(len=*), parameter :: C_REF_FRAME_WGS84     = "WGS84"      ! WGS84 reference frame
   character(len=*), parameter :: C_REF_FRAME_J2000     = "J2000"      ! J2000.0 reference frame
   character(len=*), parameter :: C_REF_FRAME_OCRF      = "OCRF"       ! Orbit Centered Reference Frame
-  character(len=*), parameter :: C_REF_FRAME_RSW       = "RSW"        ! Radial, Normal and Binormal satellite based system
-  character(len=*), parameter :: C_REF_FRAME_TEME      = "TEME"       ! True Equator Mean Equinox
+  character(len=*), parameter :: C_REF_FRAME_RSW        = "RSW"         ! Radial, Normal and Binormal satellite based system
+  character(len=*), parameter :: C_REF_FRAME_TEME       = "TEME"        ! True Equator Mean Equinox
+  character(len=*), parameter :: C_REF_FRAME_MCRF       = "MCRF"        ! Moon-Centered Reference Frame (inertial)
+  character(len=*), parameter :: C_REF_FRAME_MOON_FIXED = "MOON_FIXED"  ! Moon body-fixed rotating frame
 
 
 contains
@@ -174,6 +180,9 @@ contains
       case (C_FRAME_CENTER_EARTH_BARYCENTER) !** earth barycenter
         iout = FRAME_CENTER_EARTH_BARYCENTER
 
+      case (C_FRAME_CENTER_MOON) !** moon
+        iout = FRAME_CENTER_MOON
+
       case default !** unknown
 
         call setError(E_FRAME_CENTER, FATAL, (/cname/))
@@ -227,6 +236,9 @@ contains
 
       case(FRAME_CENTER_EARTH_BARYCENTER)
         ccenter = C_FRAME_CENTER_EARTH_BARYCENTER
+
+      case(FRAME_CENTER_MOON)
+        ccenter = C_FRAME_CENTER_MOON
 
       case default
 
@@ -307,6 +319,12 @@ character(len=MAX_ID_LENGTH) function getFrameName(id)
     case(REF_FRAME_TEME)
       getFrameName = C_REF_FRAME_TEME
 
+    case(REF_FRAME_MCRF)
+      getFrameName = C_REF_FRAME_MCRF
+
+    case(REF_FRAME_MOON_FIXED)
+      getFrameName = C_REF_FRAME_MOON_FIXED
+
     case default
       call setError(E_UNKNOWN_PARAMETER, FATAL, (/cid/))
       return
@@ -384,6 +402,12 @@ integer function getFrameId(cname)
 
     case(C_REF_FRAME_TEME)
       getFrameId = REF_FRAME_TEME
+
+    case(C_REF_FRAME_MCRF)
+      getFrameId = REF_FRAME_MCRF
+
+    case(C_REF_FRAME_MOON_FIXED)
+      getFrameId = REF_FRAME_MOON_FIXED
 
     case default
       call setError(E_UNKNOWN_PARAMETER, FATAL, (/cname/))

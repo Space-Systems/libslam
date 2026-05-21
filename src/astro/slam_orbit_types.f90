@@ -33,7 +33,7 @@ module slam_orbit_types
   !   Module parameters
   !
   !-----------------------------------------------------------------
-  integer, parameter :: idimcov  = 6                   !< dimension of covariance matrix
+  integer, parameter :: idimcov  = 7                   !< dimension of covariance matrix
   integer, parameter :: LEN_COVARIANCE_STRING = 1024   !< length of string containing the covariance matrix
   integer, parameter :: LEN_STATE_STRING      = 1024   !< length of string containing the state vector
  !----------------------------------------------------------------
