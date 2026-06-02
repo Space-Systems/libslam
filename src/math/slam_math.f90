@@ -125,7 +125,7 @@ contains
   !>  @anchor      cross
   !!
   !----------------------------------------------------
-  function cross(         &
+  pure function cross(    &
                    vec1,  & ! <-- DBL() first vector
                    vec2   & ! <-- DBL() second vector
                )

@@ -144,6 +144,8 @@ module slam_error_handling
   integer, parameter, public :: E_EARTH_GRAVITY        = 205  !< earth gravity constant value not accepted
   integer, parameter, public :: E_EOP_INIT             = 206  !< Earth orientation parameters data not
   integer, parameter, public :: E_EOP_INDEX            = 207  !< Earth orientation parameters data index too small
+  integer, parameter, public :: E_MOON_RADIUS          = 208  !< lunar reference radius value not accepted
+  integer, parameter, public :: E_MOON_GRAVITY         = 209  !< lunar gravity constant value not accepted
   !** time/coordinate conversions
   integer, parameter, public :: E_UTC                  = 300  !< UTC is not defined for dates earlier than Jan 1, 1961
   integer, parameter, public :: E_LEAP_SECOND          = 301  !< Leap seconds for propagations too far into future can not be considered
@@ -1059,6 +1061,18 @@ subroutine getErrorMessage(code, message, par)
       select case(errorLanguage)
         case default
           write(message(1:len(message)),'(a)') "Given parameter for Earth's gravity constant seems unrealistic."
+      end select
+
+    case(E_MOON_RADIUS)
+      select case(errorLanguage)
+        case default
+          write(message(1:len(message)),'(a)') "Given parameter for the Moon's reference radius seems unrealistic."
+      end select
+
+    case(E_MOON_GRAVITY)
+      select case(errorLanguage)
+        case default
+          write(message(1:len(message)),'(a)') "Given parameter for the Moon's gravity constant seems unrealistic."
       end select
 
     case(E_EOP_INIT)
