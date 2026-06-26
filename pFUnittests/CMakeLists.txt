@@ -40,3 +40,7 @@ add_pfunit_ctest (slam_error_handling_test
 add_pfunit_ctest (slam_io_test
     TEST_SOURCES test_slam_io.pf
     LINK_LIBRARIES slam-Fortran)
+
+add_pfunit_ctest (slam_moon_reduction_test
+    TEST_SOURCES test_moon_reduction.pf
+    LINK_LIBRARIES slam-Fortran)
