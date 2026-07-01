@@ -58,7 +58,7 @@ module slam_moon_reduction
   !!
   !! Usage:
   !!   type(Reduction_moon_type) :: moon_red
-  !!   call moon_red%inertial2moonFixed(r_gcrf, r_moon_gcrf, time_mjd, r_moon_fixed)
+  !!   call moon_red%gcrf2moonFixed(r_gcrf, r_moon_gcrf, time_mjd, r_moon_fixed)
   !!
   !-----------------------------------------------------------------
   type :: Reduction_moon_type
@@ -70,13 +70,13 @@ module slam_moon_reduction
 
     procedure :: getMoonFixedRotationMatrix
 
-    procedure :: inertial2moonFixed_r
-    procedure :: inertial2moonFixed_rv
-    generic   :: inertial2moonFixed => inertial2moonFixed_r, inertial2moonFixed_rv
+    procedure :: gcrf2moonFixed_r
+    procedure :: gcrf2moonFixed_rv
+    generic   :: gcrf2moonFixed => gcrf2moonFixed_r, gcrf2moonFixed_rv
 
-    procedure :: moonFixed2inertial_r
-    procedure :: moonFixed2inertial_rv
-    generic   :: moonFixed2inertial => moonFixed2inertial_r, moonFixed2inertial_rv
+    procedure :: moonFixed2gcrf_r
+    procedure :: moonFixed2gcrf_rv
+    generic   :: moonFixed2gcrf => moonFixed2gcrf_r, moonFixed2gcrf_rv
 
   end type Reduction_moon_type
 
@@ -201,7 +201,7 @@ contains
   end subroutine getMoonFixedRotationMatrix
 
   !=========================================================================
-  !> @anchor inertial2moonFixed_r
+  !> @anchor gcrf2moonFixed_r
   !> @brief Transform a position from GCRF to Moon body-fixed
   !!
   !> @param[in]  r_gcrf        Position in GCRF (km)
@@ -209,7 +209,7 @@ contains
   !> @param[in]  time_mjd      Epoch in MJD (TDB)
   !> @param[out] r_moon_fixed  Position in MOON_FIXED (km)
   !---------------------------------------------------------------------------
-  subroutine inertial2moonFixed_r(this, r_gcrf, r_moon_gcrf, time_mjd, r_moon_fixed)
+  subroutine gcrf2moonFixed_r(this, r_gcrf, r_moon_gcrf, time_mjd, r_moon_fixed)
 
     class(Reduction_moon_type), intent(inout) :: this
     real(dp), dimension(3),     intent(in)    :: r_gcrf
@@ -217,7 +217,7 @@ contains
     real(dp),                   intent(in)    :: time_mjd
     real(dp), dimension(3),     intent(out)   :: r_moon_fixed
 
-    character(len=*), parameter :: csubid = 'inertial2moonFixed_r'
+    character(len=*), parameter :: csubid = 'gcrf2moonFixed_r'
 
     if(isControlled()) then
       if(hasToReturn()) return
@@ -230,10 +230,10 @@ contains
     if(isControlled()) call checkOut(csubid)
     return
 
-  end subroutine inertial2moonFixed_r
+  end subroutine gcrf2moonFixed_r
 
   !=========================================================================
-  !> @anchor inertial2moonFixed_rv
+  !> @anchor gcrf2moonFixed_rv
   !> @brief Transform position and velocity from GCRF to Moon body-fixed
   !!
   !> @param[in]  r_gcrf        Position in GCRF (km)
@@ -248,7 +248,7 @@ contains
   !!          v_fixed = R * v_mcrf - omega x r_fixed
   !!          where omega = (0, 0, dW/dt) in the body-fixed frame.
   !---------------------------------------------------------------------------
-  subroutine inertial2moonFixed_rv(this, r_gcrf, v_gcrf, r_moon_gcrf, v_moon_gcrf, &
+  subroutine gcrf2moonFixed_rv(this, r_gcrf, v_gcrf, r_moon_gcrf, v_moon_gcrf, &
                                    time_mjd, r_moon_fixed, v_moon_fixed)
 
     class(Reduction_moon_type), intent(inout) :: this
@@ -259,7 +259,7 @@ contains
 
     real(dp), dimension(3) :: omega
 
-    character(len=*), parameter :: csubid = 'inertial2moonFixed_rv'
+    character(len=*), parameter :: csubid = 'gcrf2moonFixed_rv'
 
     if(isControlled()) then
       if(hasToReturn()) return
@@ -278,10 +278,10 @@ contains
     if(isControlled()) call checkOut(csubid)
     return
 
-  end subroutine inertial2moonFixed_rv
+  end subroutine gcrf2moonFixed_rv
 
   !=========================================================================
-  !> @anchor moonFixed2inertial_r
+  !> @anchor moonFixed2gcrf_r
   !> @brief Transform a position from Moon body-fixed to GCRF
   !!
   !> @param[in]  r_moon_fixed  Position in MOON_FIXED (km)
@@ -289,7 +289,7 @@ contains
   !> @param[in]  time_mjd      Epoch in MJD (TDB)
   !> @param[out] r_gcrf        Position in GCRF (km)
   !---------------------------------------------------------------------------
-  subroutine moonFixed2inertial_r(this, r_moon_fixed, r_moon_gcrf, time_mjd, r_gcrf)
+  subroutine moonFixed2gcrf_r(this, r_moon_fixed, r_moon_gcrf, time_mjd, r_gcrf)
 
     class(Reduction_moon_type), intent(inout) :: this
     real(dp), dimension(3),     intent(in)    :: r_moon_fixed
@@ -297,7 +297,7 @@ contains
     real(dp),                   intent(in)    :: time_mjd
     real(dp), dimension(3),     intent(out)   :: r_gcrf
 
-    character(len=*), parameter :: csubid = 'moonFixed2inertial_r'
+    character(len=*), parameter :: csubid = 'moonFixed2gcrf_r'
 
     if(isControlled()) then
       if(hasToReturn()) return
@@ -310,10 +310,10 @@ contains
     if(isControlled()) call checkOut(csubid)
     return
 
-  end subroutine moonFixed2inertial_r
+  end subroutine moonFixed2gcrf_r
 
   !=========================================================================
-  !> @anchor moonFixed2inertial_rv
+  !> @anchor moonFixed2gcrf_rv
   !> @brief Transform position and velocity from Moon body-fixed to GCRF
   !!
   !> @param[in]  r_moon_fixed  Position in MOON_FIXED (km)
@@ -324,10 +324,10 @@ contains
   !> @param[out] r_gcrf        Position in GCRF (km)
   !> @param[out] v_gcrf        Velocity in GCRF (km/s)
   !!
-  !> @details Inverse of inertial2moonFixed_rv:
+  !> @details Inverse of gcrf2moonFixed_rv:
   !!          v_mcrf = R^T * (v_fixed + omega x r_fixed)
   !---------------------------------------------------------------------------
-  subroutine moonFixed2inertial_rv(this, r_moon_fixed, v_moon_fixed, r_moon_gcrf, v_moon_gcrf, &
+  subroutine moonFixed2gcrf_rv(this, r_moon_fixed, v_moon_fixed, r_moon_gcrf, v_moon_gcrf, &
                                    time_mjd, r_gcrf, v_gcrf)
 
     class(Reduction_moon_type), intent(inout) :: this
@@ -338,7 +338,7 @@ contains
 
     real(dp), dimension(3) :: omega
 
-    character(len=*), parameter :: csubid = 'moonFixed2inertial_rv'
+    character(len=*), parameter :: csubid = 'moonFixed2gcrf_rv'
 
     if(isControlled()) then
       if(hasToReturn()) return
@@ -357,6 +357,6 @@ contains
     if(isControlled()) call checkOut(csubid)
     return
 
-  end subroutine moonFixed2inertial_rv
+  end subroutine moonFixed2gcrf_rv
 
 end module slam_moon_reduction
