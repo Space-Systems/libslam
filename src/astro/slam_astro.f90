@@ -37,6 +37,8 @@ module slam_astro
   real(dp) :: massEarth     ! earth's mass in kg
   real(dp) :: mu            ! gravity constant km^3/s^2
   real(dp) :: muorekm2      ! mu/rekm2
+  real(dp) :: mu_moon       = 4902.8d0    ! Moon's gravity constant km³/s²
+  real(dp) :: geo_rekm_moon = 1738.0d0   ! Moon's geopotential reference radius km
   real(dp) :: omega_earth   ! earth's rotational rate rad/s
   real(dp) :: flat          ! flattening
   real(dp) :: sun_radius    ! radius of the sun
@@ -79,6 +81,12 @@ module slam_astro
   public :: setEarthGeopotentialRadius
   public :: setEarthGravity
   public :: setEarthRadius
+  public :: setLunarGravity
+  public :: setLunarGeopotentialRadius
+
+  !** lunar getter
+  public :: getLunarGravity
+  public :: getLunarGeopotentialRadius
 
 contains
 
@@ -577,6 +585,78 @@ contains
     return
 
   end subroutine setEarthGeopotentialRadius
+
+  !=================================================================
+  !> @anchor    setLunarGravity
+  !> @brief     Set the Moon's gravity constant
+  !> @param[in] mu_in   Moon's gravity constant in km³/s²
+  !--------------------------------------------------------
+  subroutine setLunarGravity(mu_in)
+
+    real(dp), intent(in) :: mu_in
+
+    character(len=*), parameter :: csubid = 'setLunarGravity'
+
+    if(isControlled()) then
+      if(hasToReturn()) return
+      call checkIn(csubid)
+    end if
+
+    if(mu_in < 4800.d0 .or. mu_in > 5100.d0) then
+      call setError(E_MOON_GRAVITY, WARNING)
+      return
+    end if
+
+    mu_moon = mu_in
+
+    if(isControlled()) call checkOut(csubid)
+
+  end subroutine setLunarGravity
+
+  !=================================================================
+  !> @anchor    getLunarGravity
+  !> @brief     Get the Moon's gravity constant
+  !> @returns   Moon's gravity constant in km³/s²
+  !--------------------------------------------------------
+  real(dp) function getLunarGravity()
+    getLunarGravity = mu_moon
+  end function getLunarGravity
+
+  !=================================================================
+  !> @anchor    setLunarGeopotentialRadius
+  !> @brief     Set the Moon's geopotential reference radius
+  !> @param[in] rekm_in   Moon's reference radius in km
+  !--------------------------------------------------------
+  subroutine setLunarGeopotentialRadius(rekm_in)
+
+    real(dp), intent(in) :: rekm_in
+
+    character(len=*), parameter :: csubid = 'setLunarGeopotentialRadius'
+
+    if(isControlled()) then
+      if(hasToReturn()) return
+      call checkIn(csubid)
+    end if
+
+    if(rekm_in < 1700.d0 .or. rekm_in > 1800.d0) then
+      call setError(E_MOON_RADIUS, WARNING)
+      return
+    end if
+
+    geo_rekm_moon = rekm_in
+
+    if(isControlled()) call checkOut(csubid)
+
+  end subroutine setLunarGeopotentialRadius
+
+  !=================================================================
+  !> @anchor    getLunarGeopotentialRadius
+  !> @brief     Get the Moon's geopotential reference radius
+  !> @returns   Moon's reference radius in km
+  !--------------------------------------------------------
+  real(dp) function getLunarGeopotentialRadius()
+    getLunarGeopotentialRadius = geo_rekm_moon
+  end function getLunarGeopotentialRadius
 
   !=========================================================================
   !
